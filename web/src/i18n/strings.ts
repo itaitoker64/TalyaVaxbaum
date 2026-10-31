@@ -414,6 +414,8 @@ export const STRINGS = {
   'att.message': ['{n} הודעות חדשות', '{n} new messages'],
   'att.goal_review': ['הגיע מועד בדיקת יעד', 'Goal review date reached'],
   'att.missed': ['{n} אימונים לא תועדו השבוע', '{n} sessions not logged this week'],
+  'att.existing_program': ['עדכון בתוכנית הקיימת (מסלול B)', 'Updated existing program (Track B)'],
+  'trackB.reviewed': ['סימון כנסקר', 'Mark reviewed'],
   'att.no_program': ['אין תוכנית פעילה', 'No active program'],
   'att.hasNotes': ['עם הערות', 'with notes'],
   'coach.invite': ['הזמנת מתאמן/ת', 'Invite a client'],

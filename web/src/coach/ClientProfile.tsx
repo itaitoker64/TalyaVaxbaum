@@ -62,7 +62,7 @@ function Overview({ c, reload }: { c: any; reload: () => void }) {
   return (
     <div className="grid2">
       <div>
-        {c.track === 'B' && <ExistingProgramView ep={c.existingProgram} />}
+        {c.track === 'B' && <ExistingProgramView ep={c.existingProgram} clientId={c.id} onReviewed={reload} />}
         <div className="card">
           <h3>{t('client.onboarding')}</h3>
           {!o ? <p className="muted">{t('coach.onboardingPending')}</p> : (
@@ -212,7 +212,7 @@ function ClientNutrition({ c, reload }: { c: any; reload: () => void }) {
 }
 
 /** Track B: what the client follows today, so the coach can plan mobility around it. */
-function ExistingProgramView({ ep }: { ep: any }) {
+function ExistingProgramView({ ep, clientId, onReviewed }: { ep: any; clientId: string; onReviewed: () => void }) {
   const { t, fmtDate } = useI18n();
   return (
     <div className="card sage">
@@ -225,6 +225,9 @@ function ExistingProgramView({ ep }: { ep: any }) {
               <a key={id} className="btn small" href={mediaUrl(id)} target="_blank" rel="noreferrer noopener">📎 {t('trackB.openFile')} {i + 1}</a>
             ))}
           </div>
+          {(!ep.coachReviewedAt || ep.coachReviewedAt < ep.updatedAt) ? (
+            <button className="btn small primary" style={{ marginTop: 8 }} onClick={async () => { await POST(`/clients/${clientId}/existing-program/review`); onReviewed(); }}>{t('trackB.reviewed')}</button>
+          ) : <span className="badge ok" style={{ marginTop: 8 }}>{t('client.reviewed')}</span>}
           {ep.history?.length > 0 && (
             <details className="small" style={{ marginTop: 8 }}>
               <summary>{t('trackB.previous', { n: ep.history.length })}</summary>

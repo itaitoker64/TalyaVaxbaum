@@ -384,6 +384,11 @@ test('Track B: client shares an existing program; coach sees it with history', a
   assert.equal((await alice.put(`/clients/${bobId}/existing-program`, { text: 'x' })).status, 404);
   assert.equal((await alice.get(`/media/${pdf.data.id}/file`)).status, 404);
   assert.equal((await bob.put(`/clients/${bobId}/existing-program`, { text: 'x', mediaIds: [ids.privateMedia] })).status, 400);
+  // Coach attention queue until reviewed
+  assert.ok((await coach.get('/coach/attention')).data.some((i: any) => i.type === 'existing_program' && i.clientId === bobId));
+  assert.equal((await bob.post(`/clients/${bobId}/existing-program/review`)).status, 403);
+  assert.equal((await coach.post(`/clients/${bobId}/existing-program/review`)).status, 200);
+  assert.ok(!(await coach.get('/coach/attention')).data.some((i: any) => i.type === 'existing_program' && i.clientId === bobId));
 });
 
 test('permissions: a client cannot access another client’s private data', async () => {

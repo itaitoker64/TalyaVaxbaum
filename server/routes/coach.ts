@@ -195,6 +195,11 @@ export function attentionFor(db: DB, coachId: string, today = todayISO()) {
     push('missed', { ...r, id: 'missed-' + r.client_id }, today, { count: r.n });
   for (const r of all(db, `SELECT id AS client_id FROM users WHERE id IN (${ph}) AND id NOT IN (SELECT client_id FROM programs WHERE client_id IS NOT NULL AND status = 'active')`, ...clientIds))
     push('no_program', { ...r, id: 'noprog-' + r.client_id }, today);
+  // Track B: an updated existing program the coach hasn't reviewed yet.
+  for (const r of all(db, `SELECT client_id, existing_program_json FROM client_profiles WHERE client_id IN (${ph}) AND existing_program_json IS NOT NULL`, ...clientIds)) {
+    const ep = parse<any>(r.existing_program_json, null);
+    if (ep?.updatedAt && (!ep.coachReviewedAt || ep.coachReviewedAt < ep.updatedAt)) push('existing_program', { ...r, id: 'ep-' + r.client_id }, ep.updatedAt);
+  }
   return items.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
@@ -226,5 +231,16 @@ coachRoutes.put('/clients/:cid/existing-program', async (c) => {
   const history = prev ? [...(prev.history ?? []), { text: prev.text, mediaIds: prev.mediaIds, updatedAt: prev.updatedAt }].slice(-10) : [];
   const value = { text: b.text, mediaIds: b.mediaIds, updatedAt: now(), history };
   run(db, 'UPDATE client_profiles SET existing_program_json = ?, updated_at = ? WHERE client_id = ?', json(value), now(), cid);
+  return c.json({ ok: true });
+});
+
+coachRoutes.post('/clients/:cid/existing-program/review', (c) => {
+  const cid = c.req.param('cid');
+  requireCoach(c);
+  requireClientAccess(c, cid);
+  const db = c.get('db');
+  const ep = parse<any>(get(db, 'SELECT existing_program_json FROM client_profiles WHERE client_id = ?', cid)?.existing_program_json, null);
+  if (!ep) throw notFound();
+  run(db, 'UPDATE client_profiles SET existing_program_json = ? WHERE client_id = ?', json({ ...ep, coachReviewedAt: now() }), cid);
   return c.json({ ok: true });
 });
