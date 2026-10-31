@@ -1,0 +1,11 @@
+{
+  "name": "Movement by Talya",
+  "short_name": "Movement",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f2ea",
+  "theme_color": "#f7f2ea",
+  "dir": "rtl",
+  "lang": "he",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
