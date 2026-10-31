@@ -36,3 +36,7 @@ Prepared an initial secondary-screen pass: recipe covers use the shared `Cover` 
 Validation: typecheck, all 17 tests (10 API + 7 shared), production build and browser journey. Browser runner accepts `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`; system Chromium is available at `/usr/bin/chromium` in this environment. Use an isolated DATA_DIR and SHOTS_DIR for checks.
 
 Next: collect feedback on the five-screen review before extending the design further; complete recipe sharing and coach planned-session preview; implement password reset and email notifications with Resend (selected by user). Resend credentials and a verified sender have not been configured. Keep credentials server-side. No deployment or GitHub push was performed in this continuation.
+
+### Visual refinement after feedback
+
+User approved continuing and requested a less AI-looking appearance. Applied a flatter editorial treatment, compact text-first covers when photos are missing, quieter navigation, Heebo interface headings, and a sand default share card without decorative gradient circles. Real uploaded photos still render normally. The earlier five-screen review pause is resolved. Resend remains the selected email provider; recipe sharing, planned-session preview and email work remain outstanding.
