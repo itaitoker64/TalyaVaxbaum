@@ -64,11 +64,11 @@ export function ProgramView({ workouts }: { workouts: any[] }) {
 }
 
 type EditItem = { exercise_id: string; block: string | null; prescription: Record<string, any>; notes: string | null };
-type EditWorkout = { week_index: number; day_of_week: number; title: string; category: string | null; notes: string | null; est_minutes: number | null; items: EditItem[] };
+type EditWorkout = { week_index: number; day_of_week: number; title: string; category: string | null; notes: string | null; est_minutes: number | null; level?: string | null; items: EditItem[] };
 
 const toEdit = (workouts: any[]): EditWorkout[] =>
   workouts.map((w) => ({
-    week_index: w.week_index, day_of_week: w.day_of_week, title: w.title, category: w.category, notes: w.notes, est_minutes: w.est_minutes,
+    week_index: w.week_index, day_of_week: w.day_of_week, title: w.title, category: w.category, notes: w.notes, est_minutes: w.est_minutes, level: w.level ?? null,
     items: w.items.map((i: any) => ({ exercise_id: i.exercise_id, block: i.block, prescription: i.prescription, notes: i.notes })),
   }));
 
@@ -148,6 +148,7 @@ function Editor({ p, exercises, reload }: { p: any; exercises: any[]; reload: ()
             <Field label={t('prog.day')}><Select value={w.day_of_week} disabled={readOnly} onChange={(e) => setW(wi, { day_of_week: Number(e.target.value) })}>{[0, 1, 2, 3, 4, 5, 6].map((d) => <option key={d} value={d}>{t(('day.' + d) as StringKey)}</option>)}</Select></Field>
             <Field label={t('lib.category')}><Select value={w.category ?? ''} disabled={readOnly} onChange={(e) => setW(wi, { category: e.target.value || null })}><option value="">—</option>{CATEGORIES.map((c) => <option key={c} value={c}>{t(('cat.' + c) as StringKey)}</option>)}</Select></Field>
             <Field label={t('prog.estMinutes')}><NumInput value={w.est_minutes} onChange={(v) => setW(wi, { est_minutes: v })} /></Field>
+            <Field label={t('prog.level')}><Select value={w.level ?? ''} disabled={readOnly} onChange={(e) => setW(wi, { level: e.target.value || null })}><option value="">—</option>{['beginner', 'intermediate', 'advanced'].map((l) => <option key={l} value={l}>{t(('level.' + l) as StringKey)}</option>)}</Select></Field>
           </div>
           <Field label={t('common.notes')}><TextArea value={w.notes ?? ''} disabled={readOnly} onChange={(e) => setW(wi, { notes: e.target.value })} style={{ minHeight: 50 }} /></Field>
           <div className="stack" style={{ marginTop: 8 }}>

@@ -15,9 +15,9 @@ MVP coaching loop (see `docs/PLAN.md` §7), plus the design refinement (`docs/DE
 
 ## Left to do (priority order)
 1. **Hosting:** upgrade Render to Starter, add a Disk at `/data`, and set up backups (copy `/data/movement.db` and `/data/uploads`).
-2. **Real imagery:** allow image hosts in the environment (or have Talya upload photos). Add the coach UI to upload **category photos** (Settings → `PUT /api/coach/settings` with `covers: {category: mediaId}`; the API, validation and `useCoverSrc` already exist). In Library → Videos, add fields for practice **category / level / cover image / captions** (the API accepts `category`, `cover_media_id`, `captions_media_id`; the uploader accepts `text/vtt`).
+2. **Real imagery:** ✅ the coach can now upload a photo per workout type (Settings) and edit each guided practice's category, level, equipment, cover photo and captions (Library → Videos → ✎). Remaining: Talya uploads her actual photos and videos.
 3. **Extend the design** to the remaining screens: Nutrition (food photos on recipe cards via `Cover category="recipe"`/`photo_media_id`), Messages, Check-in, and the coach screens (attention queue, client profile, program editor). They already use the new tokens, but not the image-led cards.
-4. Program editor: add a **level** field for workouts (`program_workouts.level` is accepted by the API).
+4. ✅ Program editor has a workout **level** field.
 5. **Recipe share card** (reuse `web/src/client/ShareCard.tsx` canvas logic).
 6. Password reset and email notifications (needs an email provider), and push notifications.
 7. Later phases (`docs/PLAN.md` §5): Track B import, photo-assisted nutrition (show results as estimates; evaluate against known meals first), community, wearables.

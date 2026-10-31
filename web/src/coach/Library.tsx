@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useI18n } from '../i18n/index.tsx';
 import { useApi, POST, PUT } from '../api.ts';
-import { Async, Field, Input, TextArea, Select, NumInput, Seg, Modal, ErrorBox, Empty, DemoBadge } from '../components/ui.tsx';
+import { Async, Field, Input, TextArea, Select, NumInput, Seg, Modal, ErrorBox, Empty, DemoBadge, Icon } from '../components/ui.tsx';
 import { Uploader, VideoButton } from '../components/media.tsx';
 import { CATEGORIES, LOG_TYPES } from '../../../shared/types.ts';
 import type { StringKey } from '../i18n/strings.ts';
@@ -120,6 +120,7 @@ function Videos() {
   const [meta, setMeta] = useState({ kind: 'demo', title: '', purpose: '', duration_sec: null as number | null, equipment: '', level: '', instructions: '', external_url: '' });
   const [err, setErr] = useState<unknown>(null);
   const [key, setKey] = useState(0);
+  const [editing, setEditing] = useState<any>(null);
   const metaBody = { ...meta, purpose: meta.purpose || null, equipment: meta.equipment || null, level: meta.level || null, instructions: meta.instructions || null, external_url: undefined };
   return (
     <div className="grid2">
@@ -128,6 +129,7 @@ function Videos() {
         <p className="tiny muted">{t('lib.reuse')}</p>
         <Seg value={meta.kind} onChange={(kind) => setMeta({ ...meta, kind })} options={(['demo', 'follow_along', 'recipe', 'other'] as const).map((k) => ({ value: k, label: t(('lib.kind.' + k) as StringKey) }))} />
         <Field label={t('goal.title')}><Input value={meta.title} onChange={(e) => setMeta({ ...meta, title: e.target.value })} /></Field>
+        {meta.kind === 'follow_along' && <p className="tiny muted">{t('lib.cover')} · {t('lib.category')} · {t('lib.captions')}: {t('common.edit')} ✎</p>}
         <Field label={t('training.purpose')}><Input value={meta.purpose} onChange={(e) => setMeta({ ...meta, purpose: e.target.value })} /></Field>
         <div className="grid3">
           <Field label={t('lib.durationSec')}><NumInput value={meta.duration_sec} onChange={(v) => setMeta({ ...meta, duration_sec: v })} /></Field>
@@ -148,12 +150,14 @@ function Videos() {
                 <li key={m.id} className="row between">
                   <div className="grow"><div>{m.title} <DemoBadge show={m.is_demo} /></div><div className="tiny muted">{t(('lib.kind.' + m.kind) as StringKey)}{m.status !== 'ready' ? ` · ${t(m.status === 'failed' ? 'lib.statusFailed' : 'lib.statusUploading')}` : ''}</div></div>
                   {m.status === 'ready' && <VideoButton media={m} label={t('common.open')} />}
+                  {m.kind === 'follow_along' && <button className="btn small" onClick={() => setEditing(m)} aria-label={`${t('common.edit')}: ${m.title}`}><Icon name="edit" size={16} /></button>}
                 </li>
               ))}
             </ul>
           </div>
         )}
       </Async>
+      {editing && <PracticeMetaForm m={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); q.reload(); }} />}
     </div>
   );
 }
@@ -194,5 +198,42 @@ function Foods() {
         </Async>
       </div>
     </div>
+  );
+}
+
+/** Practice details for the client library: category, level, equipment, cover photo, captions. */
+function PracticeMetaForm({ m, onClose, onSaved }: { m: any; onClose: () => void; onSaved: () => void }) {
+  const { t } = useI18n();
+  const [f, setF] = useState({ category: m.category ?? '', level: m.level ?? '', equipment: m.equipment ?? '', cover_media_id: m.cover_media_id ?? null, captions_media_id: m.captions_media_id ?? null });
+  const [err, setErr] = useState<unknown>(null);
+  return (
+    <Modal title={m.title} onClose={onClose}>
+      <div className="stack">
+        <div className="grid2">
+          <Field label={t('lib.category')}><Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })}><option value="">{t('lib.none')}</option>{CATEGORIES.map((c) => <option key={c} value={c}>{t(('cat.' + c) as StringKey)}</option>)}</Select></Field>
+          <Field label={t('lib.level')}><Select value={f.level} onChange={(e) => setF({ ...f, level: e.target.value })}><option value="">{t('lib.none')}</option>{['beginner', 'intermediate', 'advanced'].map((l) => <option key={l} value={l}>{t(('level.' + l) as StringKey)}</option>)}</Select></Field>
+        </div>
+        <Field label={t('lib.equipment')}><Input value={f.equipment} onChange={(e) => setF({ ...f, equipment: e.target.value })} /></Field>
+        <Field label={t('lib.cover')}>
+          <div className="row">
+            {f.cover_media_id && <span className="badge ok"><Icon name="check" />{t('lib.uploaded')}</span>}
+            <Uploader createPath="/media" meta={{ kind: 'other', title: `${m.title} — cover` }} accept="image/*" label={t('lib.cover')} onDone={(id) => setF({ ...f, cover_media_id: id })} />
+          </div>
+        </Field>
+        <Field label={t('lib.captions')}>
+          <div className="row">
+            {f.captions_media_id && <span className="badge ok"><Icon name="check" />{t('lib.uploaded')}</span>}
+            <Uploader createPath="/media" meta={{ kind: 'other', title: `${m.title} — captions` }} accept=".vtt,text/vtt" label={t('lib.captions')} onDone={(id) => setF({ ...f, captions_media_id: id })} />
+          </div>
+        </Field>
+        {!!err && <ErrorBox error={err} />}
+        <button className="btn primary big" onClick={async () => {
+          try {
+            await PUT(`/media/${m.id}`, { category: f.category || null, level: f.level || null, equipment: f.equipment || null, cover_media_id: f.cover_media_id, captions_media_id: f.captions_media_id });
+            onSaved();
+          } catch (e) { setErr(e); }
+        }}>{t('common.save')}</button>
+      </div>
+    </Modal>
   );
 }
