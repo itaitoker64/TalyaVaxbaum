@@ -61,12 +61,12 @@ export function Join() {
   const { code } = useParams();
   const { t, locale } = useI18n();
   const { reload } = useAuth();
-  const inv = useApi<{ coachName: string; name: string | null }>(`/invites/${code}`);
+  const inv = useApi<{ coachName: string; name: string | null; role?: string }>(`/invites/${code}`);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  if (done) return <Navigate to="/onboarding" replace />;
+  if (done) return <Navigate to={inv.data?.role === 'coach' ? '/coach' : '/onboarding'} replace />;
   if (inv.loading) return <Shell><Loading /></Shell>;
   if (inv.error) return <Shell><div className="alert error">{t('auth.invalidInvite')}</div></Shell>;
   const submit = async (e: FormEvent) => {
@@ -87,7 +87,7 @@ export function Join() {
   return (
     <Shell>
       <form className="card stack" onSubmit={submit}>
-        <h2>{t('auth.joinTitle', { coach: inv.data!.coachName })}</h2>
+        <h2>{inv.data!.role === 'coach' ? t('auth.joinCoachTitle', { coach: inv.data!.coachName }) : t('auth.joinTitle', { coach: inv.data!.coachName })}</h2>
         <Field label={t('common.name')}><Input required defaultValue={inv.data?.name ?? ''} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" /></Field>
         <Field label={t('auth.email')}><Input type="email" required autoComplete="email" onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
         <Field label={t('auth.password')} hint={t('auth.passwordHint')}><Input type="password" required minLength={8} autoComplete="new-password" onChange={(e) => setForm({ ...form, password: e.target.value })} /></Field>

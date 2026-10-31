@@ -371,6 +371,9 @@ const MIGRATIONS: string[] = [
   ALTER TABLE workout_logs ADD COLUMN media_id TEXT REFERENCES media(id);
   ALTER TABLE coach_settings ADD COLUMN covers_json TEXT;
   `,
+  /* 3: coach invites */ `
+  ALTER TABLE invites ADD COLUMN role TEXT NOT NULL DEFAULT 'client' CHECK (role IN ('client','coach'));
+  `,
 ];
 
 export function openDb(file: string): DB {

@@ -36,14 +36,17 @@ function Invite() {
   const { t } = useI18n();
   const [name, setName] = useState('');
   const [track, setTrack] = useState<'A' | 'B'>('A');
+  const [role, setRole] = useState<'client' | 'coach'>('client');
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState<unknown>(null);
   return (
     <div className="card stack">
       <Field label={t('common.name')}><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
-      <Field label={t('coach.track')}><Seg value={track} onChange={setTrack} options={[{ value: 'A', label: t('track.A') }, { value: 'B', label: t('track.B') }]} /></Field>
-      <button className="btn primary" onClick={async () => { try { const r = await POST('/invites', { name: name || undefined, track }); setLink(`${location.origin}/join/${r.code}`); } catch (e) { setErr(e); } }}>{t('coach.invite')}</button>
+      <Field label={t('invite.role')}><Seg value={role} onChange={(v) => { setRole(v); setLink(null); }} options={[{ value: 'client', label: t('role.client') }, { value: 'coach', label: t('role.coach') }]} /></Field>
+      {role === 'coach' && <p className="tiny muted">{t('invite.coachNote')}</p>}
+      {role === 'client' && <Field label={t('coach.track')}><Seg value={track} onChange={setTrack} options={[{ value: 'A', label: t('track.A') }, { value: 'B', label: t('track.B') }]} /></Field>}
+      <button className="btn primary" onClick={async () => { try { const r = await POST('/invites', { name: name || undefined, track, role }); setLink(`${location.origin}/join/${r.code}`); } catch (e) { setErr(e); } }}>{t('coach.invite')}</button>
       {link && (
         <div className="alert ok">
           <div className="small">{t('coach.inviteLink')}</div>
