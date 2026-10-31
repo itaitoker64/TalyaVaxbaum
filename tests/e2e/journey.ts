@@ -32,7 +32,7 @@ async function login(page: Page, email: string, password: string) {
 }
 const shot = (page: Page, name: string) => page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined });
 try {
   // 1. Coach logs in and sees the attention queue (RTL, Hebrew)
   const coach = await newPage(browser, 1280, 860);
@@ -185,13 +185,14 @@ try {
   await phone.locator('svg.chart').waitFor();
   await phone.waitForTimeout(300);
   await phone.screenshot({ path: `${DR}/4-goal-progress.png`, fullPage: true });
-  // Share card from Maya's completed E2E workout
-  const logs = (await api(client, 'GET', `/clients/${clientId}/logs`)).body;
-  await client.goto(`${BASE}/training/log/${logs[0].id}/share`);
-  await client.locator('canvas.share-preview').waitFor();
-  await client.waitForTimeout(1200);
-  await client.screenshot({ path: `${DR}/5-share-editor.png`, fullPage: true });
-  const dataUrl = await client.evaluate(() => (document.querySelector('canvas.share-preview') as HTMLCanvasElement).toDataURL('image/png'));
+  // Share a completed, explicitly flagged demo workout with Hebrew content.
+  const demoId = (await api(phone, 'GET', '/auth/me')).body.user.id;
+  const logs = (await api(phone, 'GET', `/clients/${demoId}/logs`)).body;
+  await phone.goto(`${BASE}/training/log/${logs.find((l: any) => l.status === 'completed').id}/share`);
+  await phone.locator('canvas.share-preview').waitFor();
+  await phone.waitForTimeout(1200);
+  await phone.screenshot({ path: `${DR}/5-share-editor.png`, fullPage: true });
+  const dataUrl = await phone.evaluate(() => (document.querySelector('canvas.share-preview') as HTMLCanvasElement).toDataURL('image/png'));
   (await import('node:fs')).writeFileSync(`${DR}/5-share-card.png`, Buffer.from(dataUrl.split(',')[1], 'base64'));
 
   assert.deepEqual(errors, [], 'browser errors');

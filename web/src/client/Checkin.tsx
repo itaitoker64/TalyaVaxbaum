@@ -25,15 +25,15 @@ export function CheckinScreen() {
   }, [list.data, ws]);
   return (
     <div>
-      <h1>{t('checkin.title')}</h1>
+      <header className="page-intro"><h1>{t('checkin.title')}</h1></header>
       <p className="muted">{t('checkin.week', { date: dateLabel(ws) })}</p>
       <div className="card stack">
         <div className="tiny muted">{t('checkin.scale')}</div>
         {SCALES.map((k) => (
-          <div key={k} className="row between">
+          <div key={k} className="checkin-scale">
             <span>{t(('checkin.' + k) as StringKey)}</span>
             <div className="seg">
-              {[1, 2, 3, 4, 5].map((n) => <button key={n} type="button" className={a[k] === n ? 'on' : ''} onClick={() => setA({ ...a, [k]: n })}><span className="num">{n}</span></button>)}
+              {[1, 2, 3, 4, 5].map((n) => <button key={n} type="button" aria-label={`${t(('checkin.' + k) as StringKey)}: ${n}`} aria-pressed={a[k] === n} className={a[k] === n ? 'on' : ''} onClick={() => setA({ ...a, [k]: n })}><span className="num">{n}</span></button>)}
             </div>
           </div>
         ))}

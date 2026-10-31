@@ -65,3 +65,6 @@ scripts/       create-coach, seed-demo, dev runner
 tests/         node --test unit + API tests; e2e/journey.ts (Playwright)
 docs/          PLAN.md, screenshots/
 ```
+
+For browser checks with an existing Chromium installation, set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium`. Set `SHOTS_DIR` to a temporary directory to avoid overwriting checked-in review captures. Browser tests mutate demo data, so use a fresh isolated `DATA_DIR` for each run.

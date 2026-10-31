@@ -26,3 +26,13 @@ MVP coaching loop (see `docs/PLAN.md` §7), plus the design refinement (`docs/DE
 - The coach can't open a session preview for a client session that hasn't been logged yet (the Schedule link goes to `#`).
 - Video storage is local disk. For many videos, move to object storage or a video host with signed URLs (`server/storage.ts`).
 - The onboarding consent text is a placeholder; it needs Talya's privacy policy.
+
+## Design review continuation (2026-11-01)
+
+The new reference brief requests a five-screen review before broader rollout. Review captures are in `docs/screenshots/review/`: Today, guided library, active strength logging, goal progress and a 9:16 workout share card. These reuse the existing design foundation and clearly labeled original placeholders; Talya's own photography is still needed.
+
+Prepared an initial secondary-screen pass: recipe covers use the shared `Cover` fallback, check-in scales have accessible selected states and wrapping, messages have a named conversation region and composer, and coach queue/profile/program editing use shared surfaces and workout imagery. This is an initial pass, not a completed platform-wide design rollout. Share cards now label demo accounts and partial workouts honestly.
+
+Validation: typecheck, all 17 tests (10 API + 7 shared), production build and browser journey. Browser runner accepts `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`; system Chromium is available at `/usr/bin/chromium` in this environment. Use an isolated DATA_DIR and SHOTS_DIR for checks.
+
+Next: collect feedback on the five-screen review before extending the design further; complete recipe sharing and coach planned-session preview; implement password reset and email notifications with Resend (selected by user). Resend credentials and a verified sender have not been configured. Keep credentials server-side. No deployment or GitHub push was performed in this continuation.

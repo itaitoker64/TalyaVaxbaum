@@ -304,3 +304,15 @@ textarea.input { min-height: 5.5rem; resize: vertical; }
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
 }
 .main:has(.timer) { padding-bottom: 13rem; }
+
+/* Secondary screens retain calm input surfaces and the shared visual hierarchy. */
+.page-intro { background: var(--sage-soft); border-radius: var(--radius-lg); padding: 1.25rem; margin-block-end: 1rem; }
+.page-intro h1 { margin: 0; }
+.recipe-hero { aspect-ratio: 16 / 9; border-radius: var(--radius-lg); overflow: hidden; }
+.workout-banner { height: 8rem; border-radius: var(--radius); margin-block-end: 1rem; }
+.checkin-scale { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; padding-block: .5rem; border-block-end: 1px solid var(--line); }
+.checkin-scale .seg button { min-width: 44px; min-height: 44px; }
+.attention-queue > .list { display: grid; gap: .75rem; }
+.attention-queue > .list > .card { margin: 0; border: 1px solid var(--line); }
+.chatlist { min-height: 12rem; background: var(--beige); }
+.chatlist .bubble { overflow-wrap: anywhere; }

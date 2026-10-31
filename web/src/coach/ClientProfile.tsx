@@ -26,7 +26,7 @@ export function ClientProfile() {
     <Async q={q}>
       {(c) => (
         <div>
-          <div className="row between">
+          <div className="row between page-intro">
             <h1 style={{ margin: 0 }}>{c.name} <DemoBadge show={c.is_demo} /></h1>
             <span className="badge">{t('coach.track')} {c.track}</span>
           </div>

@@ -168,6 +168,11 @@ function Editor({ d }: { d: any }) {
       ctx.font = '700 36px "Frank Ruhl Libre"';
       ctx.fillText('Movement by Talya', X + sign * 78, 145);
 
+      if (user.is_demo || d.log.is_demo || (bg === 'sea')) {
+        ctx.font = '500 30px Heebo';
+        ctx.fillText([user.is_demo || d.log.is_demo ? t('common.demo') : '', bg === 'sea' ? t('img.placeholder') : ''].filter(Boolean).join(' · '), X, 205);
+      }
+
       // Content block, laid out bottom-up so the achievement sits in the lower third.
       ctx.font = '700 104px "Frank Ruhl Libre"';
       const titleLines = show.workoutName ? wrap(ctx, d.log.title, SIZE.w - 180, 3) : [];
@@ -177,7 +182,7 @@ function Editor({ d }: { d: any }) {
 
       ctx.fillStyle = accent;
       ctx.font = '700 42px Heebo';
-      ctx.fillText(t('share.done'), X, y + 42);
+      ctx.fillText(d.log.status === 'partial' ? t('status.partial') : t('share.done'), X, y + 42);
       y += 60;
       ctx.fillStyle = ink;
       ctx.font = '700 104px "Frank Ruhl Libre"';
