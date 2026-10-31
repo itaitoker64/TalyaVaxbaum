@@ -28,7 +28,7 @@ export interface GoalChartProps {
  */
 export function GoalChart({ points, baseline, target, targetMin, targetMax, unit, selectedId, onSelect }: GoalChartProps) {
   const { t, fmtDate, fmtNum, dir } = useI18n();
-  const CW = 680, CH = 330, P = { x: 46, t: 34, b: 52 };
+  const CW = 420, CH = 290, P = { x: 30, t: 34, b: 46 };
   const valid = points.filter((p) => p.value != null).sort((a, b) => (a.date < b.date ? -1 : 1));
   if (!valid.length) return <div className="empty">{t('progress.noData')}</div>;
   const vals = valid.map((p) => p.value as number);
@@ -58,7 +58,8 @@ export function GoalChart({ points, baseline, target, targetMin, targetMax, unit
     }
   }
   const methodBreaks = valid.filter((p, i) => i > 0 && p.methodVersion !== valid[i - 1].methodVersion);
-  const showAllDates = valid.length <= 6;
+  // Label every date only when they fit; otherwise first, middle and last.
+  const dateLabels = valid.length <= 4 ? valid : [valid[0], valid[Math.floor(valid.length / 2)], valid[valid.length - 1]];
   const pct = (px: number, total: number) => `${(px / total) * 100}%`;
   return (
     <div>
@@ -86,8 +87,8 @@ export function GoalChart({ points, baseline, target, targetMin, targetMax, unit
             </g>
           ))}
           <line x1={P.x} x2={CW - P.x} y1={CH - P.b + 6} y2={CH - P.b + 6} stroke="#e9e0d2" />
-          {(showAllDates ? valid : [valid[0], valid[valid.length - 1]]).map((p) => (
-            <text key={'d' + p.id} x={x(p.date)} y={CH - P.b + 28} textAnchor="middle">{fmtDate(p.date, { day: 'numeric', month: 'numeric' })}</text>
+          {dateLabels.map((p) => (
+            <text key={'d' + p.id} x={x(p.date)} y={CH - P.b + 26} textAnchor="middle">{fmtDate(p.date, { day: 'numeric', month: 'numeric' })}</text>
           ))}
         </svg>
         {/* Direct labels on reference lines (HTML, bidi-safe) */}

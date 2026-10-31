@@ -37,8 +37,9 @@ export function WorkoutCard({ to, title, category, coverMediaId, minutes, level,
   const levelLabel = useLevelLabel();
   return (
     <Link to={to} className="wcard">
-      <Cover category={category} mediaId={coverMediaId} />
-      <span className="play" aria-hidden="true"><Icon name="play" size={18} filled /></span>
+      <Cover category={category} mediaId={coverMediaId}>
+        <span className="play" aria-hidden="true"><Icon name="play" size={18} filled /></span>
+      </Cover>
       <div className="wbody">
         <div className="wtitle">{title}</div>
         <div className="meta">
