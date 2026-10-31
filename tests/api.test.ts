@@ -36,6 +36,19 @@ test('auth: login errors, me, csrf header required', async () => {
   assert.equal((await c2.post('/auth/register', { code: inv.data.code, name: 'Eve', email: 'eve@example.com', password: 'eve-password-1' })).status, 400);
 });
 
+test('coach invites create a separate coach account', async () => {
+  const inv = await coach.post('/invites', { name: 'Second coach', role: 'coach' });
+  assert.equal((await new Client(env.app).get(`/invites/${inv.data.code}`)).data.role, 'coach');
+  const c2 = new Client(env.app);
+  assert.equal((await c2.post('/auth/register', { code: inv.data.code, name: 'Second coach', email: 'coach2@example.com', password: 'coach2-password' })).status, 200);
+  const me = await c2.get('/auth/me');
+  assert.equal(me.data.user.role, 'coach');
+  assert.equal((await c2.get('/clients')).data.length, 0, 'new coach sees no clients of the inviting coach');
+  assert.equal((await c2.get(`/clients/${aliceId}`)).status, 404);
+  // Clients cannot create coach invites
+  assert.equal((await alice.post('/invites', { role: 'coach' })).status, 403);
+});
+
 test('coaching loop: program → training log → review → feedback → goals', async () => {
   // Onboarding
   assert.equal((await alice.put(`/clients/${aliceId}/onboarding`, { goals: 'Stronger legs', experience: '1 year', availability: 'Sun, Tue, Thu', daysPerWeek: 3, equipment: 'Dumbbells', considerations: 'Old knee injury', consent: true })).status, 200);

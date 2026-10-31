@@ -141,15 +141,15 @@ coachRoutes.put('/coach/settings', async (c) => {
 
 coachRoutes.get('/invites', (c) => {
   const coach = requireCoach(c);
-  return c.json(all(c.get('db'), 'SELECT code, name, email, track, created_at, expires_at, used_at FROM invites WHERE coach_id = ? ORDER BY created_at DESC LIMIT 50', coach.id));
+  return c.json(all(c.get('db'), 'SELECT code, name, email, track, role, created_at, expires_at, used_at FROM invites WHERE coach_id = ? ORDER BY created_at DESC LIMIT 50', coach.id));
 });
 
 coachRoutes.post('/invites', async (c) => {
   const coach = requireCoach(c);
-  const b = z.object({ name: z.string().max(80).optional(), email: z.string().email().optional().or(z.literal('')), track: z.enum(['A', 'B']).default('A') }).parse(await c.req.json());
+  const b = z.object({ name: z.string().max(80).optional(), email: z.string().email().optional().or(z.literal('')), track: z.enum(['A', 'B']).default('A'), role: z.enum(['client', 'coach']).default('client') }).parse(await c.req.json());
   const code = randomBytes(9).toString('base64url');
   insert(c.get('db'), 'invites', {
-    code, coach_id: coach.id, name: b.name ?? null, email: b.email || null, track: b.track,
+    code, coach_id: coach.id, role: b.role, name: b.name ?? null, email: b.email || null, track: b.track,
     created_at: now(), expires_at: new Date(Date.now() + 14 * 86_400_000).toISOString(),
   });
   return c.json({ code });

@@ -74,9 +74,9 @@ authRoutes.put('/auth/me', async (c) => {
 
 authRoutes.get('/invites/:code', (c) => {
   const db = c.get('db');
-  const inv = get(db, 'SELECT i.code, i.name, i.expires_at, i.used_at, u.name AS coach_name FROM invites i JOIN users u ON u.id = i.coach_id WHERE i.code = ?', c.req.param('code'));
+  const inv = get(db, 'SELECT i.code, i.name, i.role, i.expires_at, i.used_at, u.name AS coach_name FROM invites i JOIN users u ON u.id = i.coach_id WHERE i.code = ?', c.req.param('code'));
   if (!inv || inv.used_at || inv.expires_at < now()) return c.json({ error: 'invalid_invite' }, 404);
-  return c.json({ coachName: inv.coach_name, name: inv.name });
+  return c.json({ coachName: inv.coach_name, name: inv.name, role: inv.role });
 });
 
 const RegisterBody = z.object({
@@ -96,6 +96,13 @@ authRoutes.post('/auth/register', async (c) => {
   const hash = await hashPassword(b.password);
   const id = newId();
   tx(db, () => {
+    if (inv.role === 'coach') {
+      // A new coach gets their own empty library and client list.
+      insert(db, 'users', { id, email: b.email, password_hash: hash, name: b.name, role: 'coach', locale: b.locale, created_at: now() });
+      insert(db, 'coach_settings', { coach_id: id, week_start_day: 0, updated_at: now() });
+      run(db, 'UPDATE invites SET used_by = ?, used_at = ? WHERE code = ?', id, now(), b.code);
+      return;
+    }
     insert(db, 'users', { id, email: b.email, password_hash: hash, name: b.name, role: 'client', locale: b.locale, created_at: now() });
     insert(db, 'coach_clients', { coach_id: inv.coach_id, client_id: id, track: inv.track, status: 'active', created_at: now() });
     insert(db, 'client_profiles', { client_id: id, updated_at: now() });

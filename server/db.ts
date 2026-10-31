@@ -371,7 +371,10 @@ const MIGRATIONS: string[] = [
   ALTER TABLE workout_logs ADD COLUMN media_id TEXT REFERENCES media(id);
   ALTER TABLE coach_settings ADD COLUMN covers_json TEXT;
   `,
-  /* 3: single-use password reset tokens */ `
+  /* 3: coach invites */ `
+  ALTER TABLE invites ADD COLUMN role TEXT NOT NULL DEFAULT 'client' CHECK (role IN ('client','coach'));
+  `,
+  /* 4: single-use password reset tokens */ `
   CREATE TABLE password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL);
   CREATE INDEX password_resets_user ON password_resets(user_id);
   `,
