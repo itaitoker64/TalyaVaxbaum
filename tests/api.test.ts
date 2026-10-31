@@ -319,6 +319,42 @@ test('media: upload, range read, interrupted/invalid uploads, review', async () 
   ids.libMedia = lib.data.id;
 });
 
+test('guided practice library: categories, covers, captions, practice logs', async () => {
+  const cover = await coach.post('/media', { kind: 'other', title: 'Yoga cover' });
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+  assert.equal((await coach.req('PUT', `/media/${cover.data.id}/file`, png, { 'content-type': 'image/png' })).status, 200);
+  const vtt = await coach.post('/media', { kind: 'other', title: 'Captions' });
+  assert.equal((await coach.req('PUT', `/media/${vtt.data.id}/file`, new TextEncoder().encode('WEBVTT\n\n00:00.000 --> 00:02.000\nשלום'), { 'content-type': 'text/vtt' })).status, 200);
+  const practice = await coach.post('/media', { kind: 'follow_along', title: 'Morning flow', category: 'yoga', duration_sec: 1200, level: 'beginner', cover_media_id: cover.data.id, captions_media_id: vtt.data.id });
+  assert.equal(practice.status, 200, JSON.stringify(practice.data));
+  await coach.req('PUT', `/media/${practice.data.id}/file`, new Uint8Array(200), { 'content-type': 'video/mp4' });
+  // Another coach's media can't be used as a cover
+  const foreign = await coach2.post('/media', { kind: 'other', title: 'x' });
+  assert.equal((await coach.put(`/media/${practice.data.id}`, { cover_media_id: foreign.data.id })).status, 400);
+  // Category covers in settings
+  assert.equal((await coach.put('/coach/settings', { response_expectation: null, whatsapp_url: null, week_start_day: 0, covers: { yoga: cover.data.id } })).status, 200);
+  assert.equal((await alice.get('/auth/me')).data.covers.yoga, cover.data.id);
+  assert.equal((await coach.put('/coach/settings', { response_expectation: null, whatsapp_url: null, week_start_day: 0, covers: { yoga: vtt.data.id } })).status, 400);
+  // Client sees the practice (with category) and can play cover + captions
+  const lib = await alice.get('/media?kind=follow_along');
+  assert.equal(lib.data.find((m: any) => m.id === practice.data.id).category, 'yoga');
+  assert.equal((await alice.get(`/media/${vtt.data.id}/file`)).status, 200);
+  // Logging a practice from the library
+  const log = await alice.post(`/clients/${aliceId}/practice-logs`, { media_id: practice.data.id, date: today, durationSec: 1100, completed: true, difficulty: 'ok' });
+  assert.equal(log.status, 200, JSON.stringify(log.data));
+  const view = await alice.get(`/logs/${log.data.id}`);
+  assert.equal(view.data.log.media_id, practice.data.id);
+  assert.equal(view.data.entries[0].data.durationSec, 1100);
+  assert.ok((await alice.get(`/clients/${aliceId}/today?date=${today}`)).data.practiceLogs.some((l: any) => l.media_id === practice.data.id));
+  // Not allowed: coach logging for client, bob logging into alice, non-practice media
+  assert.equal((await coach.post(`/clients/${aliceId}/practice-logs`, { media_id: practice.data.id, date: today, completed: true })).status, 403);
+  assert.equal((await bob.post(`/clients/${aliceId}/practice-logs`, { media_id: practice.data.id, date: today, completed: true })).status, 404);
+  assert.equal((await alice.post(`/clients/${aliceId}/practice-logs`, { media_id: cover.data.id, date: today, completed: true })).status, 400);
+  // Schedule rows carry level and equipment for workout cards
+  const sched = await alice.get(`/clients/${aliceId}/schedule?from=${today}&to=${today}`);
+  assert.ok('level' in sched.data[0] && 'equipment' in sched.data[0]);
+});
+
 test('permissions: a client cannot access another client’s private data', async () => {
   const A = aliceId;
   const paths = [

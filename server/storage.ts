@@ -7,7 +7,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 export const MAX_UPLOAD_BYTES = Number(process.env.MAX_UPLOAD_MB ?? 300) * 1024 * 1024;
-export const ALLOWED_MIME = /^(video\/(mp4|quicktime|webm)|image\/(jpeg|png|webp|heic|heif))$/;
+export const ALLOWED_MIME = /^(video\/(mp4|quicktime|webm)|image\/(jpeg|png|webp|heic|heif)|text\/vtt)$/;
 
 export class LocalStorage {
   constructor(private dir: string) {

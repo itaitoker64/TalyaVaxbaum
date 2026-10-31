@@ -141,6 +141,15 @@ engagementRoutes.get('/clients/:cid/today', (c) => {
   const nutritionConfig = parse<any>(profile?.nutrition_json, { mode: 'diary' });
   const entries = all(db, 'SELECT kcal, protein, carbs, fat FROM food_entries WHERE client_id = ? AND date = ?', cid, date);
   const checkin = get(db, 'SELECT id, submitted_at FROM checkins WHERE client_id = ? AND week_start = ?', cid, ws);
+  // Complementary guided practices from the coach's library (shortest first, non-strength).
+  const practices = all(
+    db,
+    `SELECT id, title, category, duration_sec, level, equipment, cover_media_id, file_key IS NOT NULL OR external_url IS NOT NULL AS hasVideo, is_demo
+     FROM media WHERE scope = 'library' AND coach_id = ? AND kind = 'follow_along' AND status = 'ready'
+     AND IFNULL(category, '') NOT IN ('strength', 'running') ORDER BY duration_sec IS NULL, duration_sec LIMIT 6`,
+    coachId ?? '',
+  ).map((p) => ({ ...p, hasVideo: !!p.hasVideo, is_demo: !!p.is_demo }));
+  const practiceLogs = all(db, "SELECT id, media_id, status FROM workout_logs WHERE client_id = ? AND date = ? AND media_id IS NOT NULL", cid, date);
   return c.json({
     date,
     weekStart: ws,
@@ -152,6 +161,8 @@ engagementRoutes.get('/clients/:cid/today', (c) => {
     tasks,
     goals,
     nutrition: nutritionConfig.mode === 'off' ? null : { config: nutritionConfig, totals: sumMacros(entries as any), entryCount: entries.length },
+    practices,
+    practiceLogs,
     checkinDue: !checkin && (addDays(ws, 6) <= addDays(date, 2)),
     checkinDone: !!checkin,
   });

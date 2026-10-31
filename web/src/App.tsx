@@ -9,6 +9,8 @@ import { Training } from './client/Training.tsx';
 import { SessionScreen } from './client/Session.tsx';
 import { LogView } from './shared/LogView.tsx';
 import { Nutrition, RecipeScreen } from './client/Nutrition.tsx';
+import { PracticeDetail } from './client/Library.tsx';
+import { ShareCard } from './client/ShareCard.tsx';
 import { Progress } from './client/Progress.tsx';
 import { GoalDetail } from './shared/GoalDetail.tsx';
 import { CheckinScreen } from './client/Checkin.tsx';
@@ -71,7 +73,7 @@ function ClientLayout() {
       <nav className="tabbar" aria-label="main">
         {tabs.map((tab) => (
           <NavLink key={tab.to} to={tab.to} end={'end' in tab} className={({ isActive }) => (isActive ? 'active' : '')}>
-            <Icon name={tab.icon} />
+            <span className="pill"><Icon name={tab.icon} /></span>
             <span>{tab.label}</span>
           </NavLink>
         ))}
@@ -138,6 +140,8 @@ export function App() {
             <Route path="training" element={<Training />} />
             <Route path="training/session/:sid" element={<SessionScreen />} />
             <Route path="training/log/:lid" element={<LogView />} />
+            <Route path="training/log/:lid/share" element={<ShareCard />} />
+            <Route path="training/practice/:id" element={<PracticeDetail />} />
             <Route path="nutrition" element={<Nutrition />} />
             <Route path="nutrition/recipe/:id" element={<RecipeScreen />} />
             <Route path="progress" element={<Progress />} />

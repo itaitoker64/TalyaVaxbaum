@@ -363,6 +363,14 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (user_id, kind, ref_id)
   );
   `,
+  /* 2: design refinement — imagery, captions, levels, guided practice library */ `
+  ALTER TABLE media ADD COLUMN category TEXT;
+  ALTER TABLE media ADD COLUMN cover_media_id TEXT REFERENCES media(id);
+  ALTER TABLE media ADD COLUMN captions_media_id TEXT REFERENCES media(id);
+  ALTER TABLE program_workouts ADD COLUMN level TEXT;
+  ALTER TABLE workout_logs ADD COLUMN media_id TEXT REFERENCES media(id);
+  ALTER TABLE coach_settings ADD COLUMN covers_json TEXT;
+  `,
 ];
 
 export function openDb(file: string): DB {

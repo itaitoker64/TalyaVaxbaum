@@ -16,6 +16,9 @@ export interface MediaRef {
   level?: string | null;
   instructions?: string | null;
   purpose?: string | null;
+  captions_media_id?: string | null;
+  category?: string | null;
+  cover_media_id?: string | null;
 }
 
 /** Turns supported external links into embeddable URLs; anything else opens in a new tab. */
@@ -29,7 +32,7 @@ function embedUrl(url: string): string | null {
   return null;
 }
 
-export function MediaPlayer({ media }: { media: MediaRef }) {
+export function MediaPlayer({ media, autoPlay }: { media: MediaRef; autoPlay?: boolean }) {
   if (media.external_url) {
     const e = embedUrl(media.external_url);
     return e ? (
@@ -41,35 +44,44 @@ export function MediaPlayer({ media }: { media: MediaRef }) {
   if (media.mime?.startsWith('image/')) return <img src={mediaUrl(media.id)} alt={media.title} style={{ borderRadius: 12 }} />;
   return (
     <div className="video-wrap">
-      <video src={mediaUrl(media.id)} controls playsInline preload="metadata" />
+      {/* Captions are offered when the coach uploaded a WebVTT file. Never autoplays unless the user pressed play. */}
+      <video src={mediaUrl(media.id)} controls playsInline preload="metadata" autoPlay={autoPlay}>
+        {media.captions_media_id && <track kind="captions" src={mediaUrl(media.captions_media_id)} srcLang="he" label="עברית" default />}
+      </video>
     </div>
   );
 }
 
-/** A compact button that opens a demonstration or follow-along video in a sheet. */
-export function VideoButton({ media, label }: { media: MediaRef | null | undefined; label: string }) {
-  const [open, setOpen] = useState(false);
+/** Sheet with a video plus its purpose and instructions. */
+export function VideoModal({ media, onClose }: { media: MediaRef; onClose: () => void }) {
   const { t } = useI18n();
-  if (!media) return null;
+  return (
+    <Modal title={media.title} onClose={onClose}>
+      <MediaPlayer media={media} />
+      <div className="stack" style={{ marginTop: '0.75rem' }}>
+        {media.purpose && <p><strong>{t('training.purpose')}:</strong> {media.purpose}</p>}
+        <div className="row small muted">
+          {media.level && <span>{t('lib.level')}: {media.level}</span>}
+          {media.equipment && <span>{t('lib.equipment')}: {media.equipment}</span>}
+        </div>
+        {media.instructions && <p className="pre">{media.instructions}</p>}
+      </div>
+    </Modal>
+  );
+}
+
+/** A compact button that opens a demonstration or follow-along video in a sheet. */
+export function VideoButton({ media, label }: { media: (MediaRef & { hasFile?: boolean | number }) | null | undefined; label: string }) {
+  const [open, setOpen] = useState(false);
+  // Only offer playback when there is something to play (no broken players for missing files).
+  if (!media || (!media.external_url && media.hasFile === 0)) return null;
   return (
     <>
       <button className="btn small" onClick={() => setOpen(true)}>
-        <Icon name="play" /> {label}
+        <Icon name="play" size={18} filled /> {label}
         {media.duration_sec ? <span className="num tiny muted">{formatDuration(media.duration_sec)}</span> : null}
       </button>
-      {open && (
-        <Modal title={media.title} onClose={() => setOpen(false)}>
-          <MediaPlayer media={media} />
-          <div className="stack" style={{ marginTop: '0.75rem' }}>
-            {media.purpose && <p><strong>{t('training.purpose')}:</strong> {media.purpose}</p>}
-            <div className="row small muted">
-              {media.level && <span>{t('lib.level')}: {media.level}</span>}
-              {media.equipment && <span>{t('lib.equipment')}: {media.equipment}</span>}
-            </div>
-            {media.instructions && <p className="pre">{media.instructions}</p>}
-          </div>
-        </Modal>
-      )}
+      {open && <VideoModal media={media} onClose={() => setOpen(false)} />}
     </>
   );
 }

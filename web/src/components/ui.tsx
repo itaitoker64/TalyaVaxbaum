@@ -3,6 +3,10 @@ import { useI18n } from '../i18n/index.tsx';
 import type { StringKey } from '../i18n/strings.ts';
 import { ApiError } from '../api.ts';
 import { todayISO, addDays } from '../../../shared/dates.ts';
+import {
+  Sun, Dumbbell, Salad, TrendingUp, MessageCircle, Play, Check, Video, Timer, Share2, Pencil, Save, Clock, Gauge,
+  SlidersHorizontal, Download, Image as ImageIcon, History, Target, LayoutGrid, ChevronLeft, Plus, Minus, X, Captions, Heart, Star, Leaf, Flame,
+} from 'lucide-react';
 
 export function Loading() {
   const { t } = useI18n();
@@ -172,22 +176,25 @@ export function DateNav({ date, onChange }: { date: string; onChange: (d: string
   );
 }
 
-export function Icon({ name }: { name: 'today' | 'training' | 'nutrition' | 'progress' | 'chat' | 'play' | 'check' | 'video' | 'timer' }) {
-  const p = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-  const paths: Record<string, ReactNode> = {
-    today: <><circle cx="12" cy="12" r="4" {...p} /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" {...p} /></>,
-    training: <path d="M6 7v10M18 7v10M3 9v6M21 9v6M6 12h12" {...p} />,
-    nutrition: <><path d="M12 21c-4 0-7-3.5-7-8 0-3 2-5 4.5-5 1.2 0 1.9.5 2.5.5s1.3-.5 2.5-.5C17 8 19 10 19 13c0 4.5-3 8-7 8z" {...p} /><path d="M12 8c0-2 1-4 3-5" {...p} /></>,
-    progress: <path d="M4 19h16M6 16l4-5 3 3 5-7" {...p} />,
-    chat: <path d="M4 5h16v11H8l-4 4z" {...p} />,
-    play: <path d="M8 5l11 7-11 7z" fill="currentColor" />,
-    check: <path d="M5 12l5 5 9-10" {...p} strokeWidth={2.4} />,
-    video: <><rect x="3" y="6" width="13" height="12" rx="2" {...p} /><path d="M16 10l5-3v10l-5-3" {...p} /></>,
-    timer: <><circle cx="12" cy="13" r="8" {...p} /><path d="M12 9v4l2 2M9 2h6" {...p} /></>,
-  };
+const ICONS = {
+  today: Sun, training: Dumbbell, nutrition: Salad, progress: TrendingUp, chat: MessageCircle, play: Play, check: Check,
+  video: Video, timer: Timer, share: Share2, edit: Pencil, save: Save, clock: Clock, level: Gauge, equipment: Dumbbell,
+  filter: SlidersHorizontal, download: Download, image: ImageIcon, history: History, target: Target, library: LayoutGrid,
+  chevron: ChevronLeft, plus: Plus, minus: Minus, close: X, captions: Captions, heart: Heart, star: Star, leaf: Leaf, flame: Flame,
+} as const;
+export type IconName = keyof typeof ICONS;
+const DIRECTIONAL = new Set<IconName>(['chevron']);
+
+/** One icon family (Lucide, 2px stroke). Decorative by default; pass `label` for icon-only meaning. */
+export function Icon({ name, size = 22, label, filled }: { name: IconName; size?: number; label?: string; filled?: boolean }) {
+  const C = ICONS[name];
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-      {paths[name]}
-    </svg>
+    <C size={size} strokeWidth={2} aria-hidden={label ? undefined : true} aria-label={label} role={label ? 'img' : undefined}
+      className={DIRECTIONAL.has(name) ? 'flip-rtl' : undefined} fill={filled ? 'currentColor' : 'none'} />
   );
+}
+
+/** Toggle chip with a visible selected state (fill + weight) and aria-pressed. */
+export function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+  return <button type="button" className="chip" aria-pressed={on} onClick={onClick}>{on && <Check size={16} strokeWidth={2.5} aria-hidden />}{children}</button>;
 }

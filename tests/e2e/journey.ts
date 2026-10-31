@@ -71,9 +71,9 @@ try {
   const exercises = (await api(coach, 'GET', '/exercises')).body;
   const byName = (n: string) => exercises.find((e: any) => e.name === n).id;
   const tpl = await api(coach, 'POST', '/programs', { name: 'E2E block', length_weeks: 2, content: { workouts: [{ week_index: 1, day_of_week: today.getDay(), title: 'אימון כוח E2E', category: 'strength', est_minutes: 40, items: [
-    { exercise_id: byName('Goblet squat'), prescription: { sets: 2, reps: 8, load: 10, loadUnit: 'kg', restSec: 5 } },
-    { exercise_id: byName('Hip mobility flow'), prescription: { durationMin: 10 } },
-    { exercise_id: byName('Easy run'), prescription: { distanceKm: 2 } },
+    { exercise_id: byName('סקוואט גביע'), prescription: { sets: 2, reps: 8, load: 10, loadUnit: 'kg', restSec: 5 } },
+    { exercise_id: byName('זרימת מוביליטי לירכיים'), prescription: { durationMin: 10 } },
+    { exercise_id: byName('ריצה קלה'), prescription: { distanceKm: 2 } },
   ] }] } });
   assert.equal(tpl.status, 200);
   await coach.goto(`${BASE}/coach/clients/${clientId}/program`);
@@ -89,12 +89,13 @@ try {
   await shot(client, 'client-today-session');
   await client.getByRole('button', { name: /להתחיל/ }).click();
   await client.waitForURL('**/training/session/**');
+  // Approved swap first, then tap ✓ (fills from the prescription) — the next exercise opens automatically.
+  await client.locator('select[aria-label="חלופה מאושרת"]').selectOption({ label: 'חלופה מאושרת: סקוואט לקופסה' });
   await client.locator('.setcheck').first().click();
   await client.locator('.timer').waitFor(); // rest timer started from prescription
   await client.locator('.setcheck').nth(1).click();
-  await client.locator('select[aria-label="חלופה מאושרת"]').selectOption({ label: 'חלופה מאושרת: Box squat' });
-  await client.locator('.setcheck').first().click();
   await client.getByText('השלמתי את התרגול').click();
+  await client.locator('button.ex-head', { hasText: 'ריצה קלה' }).click();
   await client.getByLabel('מרחק (ק״מ)').fill('2.1');
   await client.locator('input[placeholder="25:00"]').fill('13:30');
   await client.getByText('6:26/km').waitFor(); // pace calculated from distance & time
@@ -103,7 +104,7 @@ try {
   await client.getByRole('button', { name: 'סיום אימון' }).click();
   await client.getByRole('button', { name: 'השלמתי חלק' }).click();
   await client.waitForURL('**/training/log/**');
-  await client.getByText('בוצע במקום: Goblet squat').waitFor();
+  await client.getByText('בוצע במקום: סקוואט גביע').waitFor();
   await shot(client, 'client-log-view');
 
   // 6. Coach sees the workout in the queue, reviews prescribed vs actual, sends feedback
@@ -142,7 +143,7 @@ try {
     await shot(noa, name);
   }
   await noa.goto(BASE + '/nutrition');
-  await noa.getByText('Overnight oats (Demo)').waitFor();
+  await noa.getByText('דייסת לילה (דמו)').waitFor();
 
   // 10. Permission check through the browser session: Noa cannot read Maya's data
   for (const p of [`/clients/${clientId}/today`, `/clients/${clientId}/goals`, `/goals/${goal.body.id}`, `/clients/${clientId}/logs`]) {
@@ -153,6 +154,43 @@ try {
     await coach.waitForLoadState('networkidle');
     await shot(coach, name);
   }
+
+  // Design review: the five screens, phone viewport, demo data
+  const DR = SHOTS + '/design';
+  mkdirSync(DR, { recursive: true });
+  const phone = await newPage(browser);
+  await login(phone, 'noa@demo.local', 'demo-password');
+  await phone.goto(BASE + '/');
+  await phone.locator('.hero').first().waitFor();
+  await phone.waitForTimeout(500);
+  await phone.screenshot({ path: `${DR}/1-today.png`, fullPage: true });
+  await phone.goto(BASE + '/training?tab=library');
+  await phone.locator('.wcard').first().waitFor();
+  await phone.waitForTimeout(300);
+  await phone.screenshot({ path: `${DR}/2-library.png`, fullPage: true });
+  await phone.locator('.wcard').first().click();
+  await phone.locator('.preview').waitFor();
+  await phone.screenshot({ path: `${DR}/2b-practice-detail.png`, fullPage: true });
+  await phone.goto(BASE + '/');
+  await phone.getByRole('button', { name: /להתחיל/ }).first().click();
+  await phone.waitForURL('**/training/session/**');
+  await phone.locator('.setcheck').first().click();
+  await phone.locator('.timer').waitFor();
+  await phone.waitForTimeout(300);
+  await phone.screenshot({ path: `${DR}/3-active-workout.png` });
+  const goals = (await api(phone, 'GET', `/clients/${(await api(phone, 'GET', '/auth/me')).body.user.id}/goals`)).body;
+  await phone.goto(`${BASE}/progress/goal/${goals.find((g: any) => g.kind === 'performance').id}`);
+  await phone.locator('svg.chart').waitFor();
+  await phone.waitForTimeout(300);
+  await phone.screenshot({ path: `${DR}/4-goal-progress.png`, fullPage: true });
+  // Share card from Maya's completed E2E workout
+  const logs = (await api(client, 'GET', `/clients/${clientId}/logs`)).body;
+  await client.goto(`${BASE}/training/log/${logs[0].id}/share`);
+  await client.locator('canvas.share-preview').waitFor();
+  await client.waitForTimeout(1200);
+  await client.screenshot({ path: `${DR}/5-share-editor.png`, fullPage: true });
+  const dataUrl = await client.evaluate(() => (document.querySelector('canvas.share-preview') as HTMLCanvasElement).toDataURL('image/png'));
+  (await import('node:fs')).writeFileSync(`${DR}/5-share-card.png`, Buffer.from(dataUrl.split(',')[1], 'base64'));
 
   assert.deepEqual(errors, [], 'browser errors');
   console.log('E2E journey passed. Screenshots in', SHOTS);

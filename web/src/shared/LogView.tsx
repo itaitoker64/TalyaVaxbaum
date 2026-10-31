@@ -3,7 +3,7 @@ import { useParams, useSearchParams, Link } from 'react-router';
 import { useI18n } from '../i18n/index.tsx';
 import { useUser } from '../auth.tsx';
 import { useApi, POST } from '../api.ts';
-import { Async, StatusBadge, TextArea, ErrorBox, useDateLabel, N, Parts } from '../components/ui.tsx';
+import { Async, StatusBadge, TextArea, ErrorBox, useDateLabel, N, Parts, Icon } from '../components/ui.tsx';
 import { MediaPlayer } from '../components/media.tsx';
 import { prescriptionParts, actualParts } from './format.ts';
 
@@ -39,6 +39,9 @@ function LogInner({ d, reload }: { d: any; reload: () => void }) {
   return (
     <div>
       {params.get('done') && <div className="alert ok">{d.log.status === 'completed' ? t('today.done') : t('today.partial')}</div>}
+      {!isCoach && d.log.status !== 'skipped' && d.log.status !== 'draft' && (
+        <Link className="btn accent big" style={{ marginBottom: '1rem' }} to={`/training/log/${d.log.id}/share`}><Icon name="share" /> {t('share.open')}</Link>
+      )}
       <div className="row between" style={{ marginBottom: '0.5rem' }}>
         <div>
           <h1 style={{ margin: 0 }}>{d.log.title}</h1>

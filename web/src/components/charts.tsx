@@ -1,11 +1,13 @@
 // Hand-made SVG charts. They plot only recorded data: no smoothing, no projections.
 import { useI18n } from '../i18n/index.tsx';
-import { segmentsByMethod, type MeasurementPoint } from '../../../shared/goals.ts';
+import { type MeasurementPoint } from '../../../shared/goals.ts';
+import { Icon } from './ui.tsx';
 import { daysBetween } from '../../../shared/dates.ts';
 
 const W = 640;
 const H = 240;
 const PAD = { l: 40, r: 40, t: 16, b: 34 };
+const GAP_DAYS = 28;
 
 export interface GoalChartProps {
   points: (MeasurementPoint & { isBaseline?: boolean })[];
@@ -18,72 +20,89 @@ export interface GoalChartProps {
   onSelect?: (id: string) => void;
 }
 
+/**
+ * Goal chart. Measured results are solid points joined by a line; the baseline and target are
+ * labeled reference lines (or a shaded range); the line breaks at a change of measurement method
+ * and across long gaps, which are marked rather than interpolated. Hebrew labels are HTML overlays
+ * so bidi text is never reordered inside SVG.
+ */
 export function GoalChart({ points, baseline, target, targetMin, targetMax, unit, selectedId, onSelect }: GoalChartProps) {
-  const { t, fmtDate, dir } = useI18n();
+  const { t, fmtDate, fmtNum, dir } = useI18n();
+  const CW = 680, CH = 330, P = { x: 46, t: 34, b: 52 };
   const valid = points.filter((p) => p.value != null).sort((a, b) => (a.date < b.date ? -1 : 1));
   if (!valid.length) return <div className="empty">{t('progress.noData')}</div>;
   const vals = valid.map((p) => p.value as number);
   [baseline, target, targetMin, targetMax].forEach((v) => v != null && vals.push(v));
-  let lo = Math.min(...vals);
-  let hi = Math.max(...vals);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
   if (lo === hi) { lo -= 1; hi += 1; }
-  const pad = (hi - lo) * 0.12;
+  const pad = (hi - lo) * 0.15;
   lo -= pad; hi += pad;
-  const d0 = valid[0].date;
-  const d1 = valid[valid.length - 1].date;
+  const d0 = valid[0].date, d1 = valid[valid.length - 1].date;
   const span = Math.max(1, daysBetween(d0, d1));
   const rtl = dir === 'rtl';
+  const w = CW - 2 * P.x;
   // Time runs in reading direction: right-to-left in Hebrew.
-  const x = (d: string) => {
-    const f = valid.length === 1 ? 0.5 : daysBetween(d0, d) / span;
-    const w = W - PAD.l - PAD.r;
-    return rtl ? W - PAD.r - f * w : PAD.l + f * w;
-  };
-  const y = (v: number) => PAD.t + (1 - (v - lo) / (hi - lo)) * (H - PAD.t - PAD.b);
-  const ticks = [lo + pad, (lo + hi) / 2, hi - pad];
-  const segs = segmentsByMethod(valid);
-  const methodBreaks = segs.slice(1).map((s) => s[0]);
-  const xl = Math.min(x(d0), x(d1)) - 6;
-  const xr = Math.max(x(d0), x(d1)) + 6;
-
+  const x = (d: string) => { const f = valid.length === 1 ? 0.5 : daysBetween(d0, d) / span; return rtl ? CW - P.x - f * w : P.x + f * w; };
+  const y = (v: number) => P.t + (1 - (v - lo) / (hi - lo)) * (CH - P.t - P.b);
+  const ticks = [0, 1, 2, 3].map((i) => lo + pad + ((hi - lo - 2 * pad) * i) / 3);
+  // Segments: break on method change and on long gaps (no interpolation across missing data).
+  const segs: typeof valid[] = [];
+  const gaps: [typeof valid[0], typeof valid[0]][] = [];
+  for (const p of valid) {
+    const last = segs[segs.length - 1];
+    const prev = last?.[last.length - 1];
+    if (prev && prev.methodVersion === p.methodVersion && daysBetween(prev.date, p.date) <= GAP_DAYS) last.push(p);
+    else {
+      if (prev && daysBetween(prev.date, p.date) > GAP_DAYS) gaps.push([prev, p]);
+      segs.push([p]);
+    }
+  }
+  const methodBreaks = valid.filter((p, i) => i > 0 && p.methodVersion !== valid[i - 1].methodVersion);
+  const showAllDates = valid.length <= 6;
+  const pct = (px: number, total: number) => `${(px / total) * 100}%`;
   return (
     <div>
-      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="goal chart">
-        {ticks.map((v, i) => (
-          <g key={i}>
-            <line x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} stroke="#eee5d8" />
-            <text x={rtl ? W - 2 : 2} y={y(v) + 4} textAnchor={rtl ? 'end' : 'start'}>{Math.round(v * 10) / 10}</text>
-          </g>
-        ))}
-        {targetMin != null && targetMax != null && (
-          <rect x={PAD.l} width={W - PAD.l - PAD.r} y={y(targetMax)} height={Math.max(1, y(targetMin) - y(targetMax))} fill="#e3e8dc" opacity="0.8" />
-        )}
-        {target != null && <line x1={PAD.l} x2={W - PAD.r} y1={y(target)} y2={y(target)} stroke="#56664d" strokeDasharray="6 5" strokeWidth="2" />}
-        {baseline != null && <line x1={PAD.l} x2={W - PAD.r} y1={y(baseline)} y2={y(baseline)} stroke="#b9a68a" strokeDasharray="2 4" strokeWidth="2" />}
-        {methodBreaks.map((p) => (
-          <line key={'m' + p.id} x1={x(p.date)} x2={x(p.date)} y1={PAD.t} y2={H - PAD.b} stroke="#9a6b1f" strokeDasharray="3 3" />
-        ))}
-        {segs.map((s, i) => (
-          <polyline key={i} fill="none" stroke="#8a9a7b" strokeWidth="2.5" points={s.map((p) => `${x(p.date)},${y(p.value as number)}`).join(' ')} />
-        ))}
-        {valid.map((p) => (
-          <g key={p.id} onClick={() => onSelect?.(p.id)} style={{ cursor: onSelect ? 'pointer' : undefined }}>
-            <circle cx={x(p.date)} cy={y(p.value as number)} r={selectedId === p.id ? 8 : 6}
-              fill={p.conditionsDiffer ? '#fff' : p.isBaseline ? '#b9a68a' : '#56664d'} stroke="#56664d" strokeWidth="2" />
-            {(p.notes || p.hasMedia) && <circle cx={x(p.date) + 7} cy={y(p.value as number) - 7} r="3" fill="#9a6b1f" />}
-            <circle cx={x(p.date)} cy={y(p.value as number)} r="16" fill="transparent" />
-          </g>
-        ))}
-        <text x={x(d0)} y={H - 10} textAnchor="middle">{fmtDate(d0, { day: 'numeric', month: 'short' })}</text>
-        {d1 !== d0 && <text x={x(d1)} y={H - 10} textAnchor="middle">{fmtDate(d1, { day: 'numeric', month: 'short' })}</text>}
-        <line x1={xl} x2={xr} y1={H - PAD.b} y2={H - PAD.b} stroke="#e6dccd" />
-      </svg>
+      <div style={{ position: 'relative' }}>
+        <svg className="chart" viewBox={`0 0 ${CW} ${CH}`} role="img" aria-label={`${t('progress.history')}: ${valid.map((p) => `${fmtDate(p.date, { day: 'numeric', month: 'short' })} ${fmtNum(p.value)}`).join(', ')}`}>
+          {ticks.map((v, i) => (
+            <g key={i}>
+              <line x1={P.x} x2={CW - P.x} y1={y(v)} y2={y(v)} stroke="#eee5d8" />
+              <text x={rtl ? CW - 4 : 4} y={y(v) + 5} textAnchor={rtl ? 'end' : 'start'}>{fmtNum(v)}</text>
+            </g>
+          ))}
+          {targetMin != null && targetMax != null && <rect x={P.x} width={w} y={y(targetMax)} height={Math.max(2, y(targetMin) - y(targetMax))} fill="#e5ebdd" />}
+          {target != null && <line x1={P.x} x2={CW - P.x} y1={y(target)} y2={y(target)} stroke="#4d6143" strokeDasharray="10 7" strokeWidth="2.5" />}
+          {baseline != null && <line x1={P.x} x2={CW - P.x} y1={y(baseline)} y2={y(baseline)} stroke="#b9a68a" strokeDasharray="2 6" strokeWidth="2.5" strokeLinecap="round" />}
+          {methodBreaks.map((p) => <line key={'m' + p.id} x1={x(p.date)} x2={x(p.date)} y1={P.t - 10} y2={CH - P.b} stroke="#8a5d12" strokeDasharray="4 4" strokeWidth="1.5" />)}
+          {gaps.map(([a, b], i) => <line key={'g' + i} x1={x(a.date)} x2={x(b.date)} y1={y(a.value as number)} y2={y(b.value as number)} stroke="#cbbca5" strokeWidth="2" strokeDasharray="1 7" strokeLinecap="round" />)}
+          {segs.map((sg, i) => sg.length > 1 && <polyline key={i} fill="none" stroke="#7e9471" strokeWidth="3.5" strokeLinejoin="round" points={sg.map((p) => `${x(p.date)},${y(p.value as number)}`).join(' ')} />)}
+          {valid.map((p) => (
+            <g key={p.id} onClick={() => onSelect?.(p.id)} style={{ cursor: onSelect ? 'pointer' : undefined }}>
+              <circle cx={x(p.date)} cy={y(p.value as number)} r={selectedId === p.id ? 10 : 8}
+                fill={p.conditionsDiffer ? '#fff' : p.isBaseline ? '#b9a68a' : '#4d6143'} stroke={p.isBaseline ? '#8a7558' : '#4d6143'} strokeWidth="3" />
+              <text className="lbl" x={x(p.date)} y={y(p.value as number) - 15} textAnchor="middle" style={{ fill: '#26241f' }}>{fmtNum(p.value)}</text>
+              {(p.notes || p.hasMedia) && <circle cx={x(p.date) + 10} cy={y(p.value as number) + 10} r="4" fill="#8a5d12" />}
+              <circle cx={x(p.date)} cy={y(p.value as number)} r="20" fill="transparent" />
+            </g>
+          ))}
+          <line x1={P.x} x2={CW - P.x} y1={CH - P.b + 6} y2={CH - P.b + 6} stroke="#e9e0d2" />
+          {(showAllDates ? valid : [valid[0], valid[valid.length - 1]]).map((p) => (
+            <text key={'d' + p.id} x={x(p.date)} y={CH - P.b + 28} textAnchor="middle">{fmtDate(p.date, { day: 'numeric', month: 'numeric' })}</text>
+          ))}
+        </svg>
+        {/* Direct labels on reference lines (HTML, bidi-safe) */}
+        {target != null && <span className="badge" style={{ position: 'absolute', top: `calc(${pct(y(target), CH)} - 1.45rem)`, [rtl ? 'right' : 'left']: pct(P.x, CW), background: '#4d6143', color: '#fff' }}><Icon name="target" />{t('progress.target')} <bdi>{fmtNum(target)} {unit}</bdi></span>}
+        {targetMin != null && targetMax != null && <span className="badge" style={{ position: 'absolute', top: `calc(${pct(y(targetMax), CH)} - 1.45rem)`, [rtl ? 'right' : 'left']: pct(P.x, CW), background: '#4d6143', color: '#fff' }}><Icon name="target" />{t('progress.targetRange')} <bdi>{fmtNum(targetMin)}–{fmtNum(targetMax)} {unit}</bdi></span>}
+        {baseline != null && <span className="badge" style={{ position: 'absolute', top: `calc(${pct(y(baseline), CH)} + 0.25rem)`, [rtl ? 'left' : 'right']: pct(P.x, CW), background: '#f3ece1', color: '#6b6358' }}>{t('progress.baseline')} <bdi>{fmtNum(baseline)}</bdi></span>}
+        {unit && <span className="tiny muted" style={{ position: 'absolute', top: 0, [rtl ? 'right' : 'left']: 0 }}>{unit}</span>}
+      </div>
       <div className="legend">
-        <span><i style={{ background: '#8a9a7b' }} />{t('progress.latest')}{unit ? ` (${unit})` : ''}</span>
-        {baseline != null && <span><i style={{ background: '#b9a68a' }} />{t('progress.baseline')}</span>}
-        {target != null && <span><i style={{ background: '#56664d' }} />{t('progress.target')}</span>}
-        {targetMin != null && targetMax != null && <span><i style={{ background: '#e3e8dc', height: 10 }} />{t('progress.targetRange')}</span>}
-        {methodBreaks.length > 0 && <span><i style={{ background: '#9a6b1f' }} />{t('progress.methodChanged')}</span>}
+        <span><i style={{ borderColor: '#7e9471', borderTopWidth: 4 }} />● {t('progress.measured')}</span>
+        {baseline != null && <span><i style={{ borderColor: '#b9a68a', borderTopStyle: 'dotted' }} />{t('progress.baseline')}</span>}
+        {target != null && <span><i style={{ borderColor: '#4d6143', borderTopStyle: 'dashed' }} />{t('progress.target')}</span>}
+        {targetMin != null && targetMax != null && <span><i style={{ borderColor: '#e5ebdd', borderTopWidth: 10 }} />{t('progress.targetRange')}</span>}
+        {gaps.length > 0 && <span><i style={{ borderColor: '#cbbca5', borderTopStyle: 'dotted' }} />{t('progress.gap')}</span>}
+        {methodBreaks.length > 0 && <span><i style={{ borderColor: '#8a5d12', borderTopStyle: 'dashed' }} />{t('progress.methodChanged')}</span>}
         {valid.some((p) => p.conditionsDiffer) && <span>○ {t('progress.differentConditions')}</span>}
       </div>
       <div className="tiny muted" style={{ marginTop: 4 }}>{t('progress.noProjection')}</div>

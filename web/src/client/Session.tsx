@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router';
 import { useI18n } from '../i18n/index.tsx';
 import { useUser } from '../auth.tsx';
 import { useApi, POST, PUT, ApiError } from '../api.ts';
 import { Async, NumInput, Modal, Field, TextArea, Input, StatusBadge, Seg, ErrorBox, useDateLabel, Icon, N, Parts } from '../components/ui.tsx';
-import { VideoButton, Uploader } from '../components/media.tsx';
+import { VideoButton, VideoModal, Uploader } from '../components/media.tsx';
+import { Cover } from '../components/imagery.tsx';
 import { RestTimer } from '../components/RestTimer.tsx';
 import { prescriptionParts, actualParts } from '../shared/format.ts';
 import { formatPace, paceSecPerKm, parseDuration, formatDuration } from '../../../shared/pace.ts';
@@ -155,7 +156,7 @@ function MoveModal({ sid, from, onClose, onDone }: { sid: string; from: string; 
   );
 }
 
-/** The live logger: quick inputs, last-time hints, rest timer, approved swaps and autosave. */
+/** The live logger: calm, readable, one exercise in focus; autosave, last-time hints, rest timer, approved swaps. */
 function Logger({ d }: { d: any }) {
   const { t } = useI18n();
   const user = useUser();
@@ -176,18 +177,27 @@ function Logger({ d }: { d: any }) {
   };
   const [state, setState] = useState(initial);
   const [saveState, setSaveState] = useState<{ kind: 'idle' | 'saving' | 'saved' | 'local' | 'error'; at?: Date }>({ kind: 'idle' });
-  const [timer, setTimer] = useState<number | null>(null);
+  const [timer, setTimer] = useState<{ endsAt: number; total: number } | null>(null);
   const [finishOpen, setFinishOpen] = useState(false);
   const [finishErr, setFinishErr] = useState<unknown>(null);
-  const dirty = useRef(false);
+  const [video, setVideo] = useState<any>(null);
   const tm = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const isDone = (e: Entry, logType: string) =>
+    logType === 'strength' ? (e.data.sets ?? []).length > 0 && (e.data.sets ?? []).every((x) => x.done)
+      : logType === 'practice' ? !!e.data.completed
+      : logType === 'running' ? e.data.distanceKm != null && e.data.durationSec != null
+      : e.data.rounds != null;
+  const logTypeOf = (e: Entry) => d.exercises[e.exercise_id]?.log_type ?? (e.program_item_id ? itemsById.get(e.program_item_id)?.log_type : 'strength') ?? 'strength';
+  const doneFlags = state.entries.map((e) => isDone(e, logTypeOf(e)));
+  const doneCount = doneFlags.filter(Boolean).length;
+  const [open, setOpen] = useState<number>(() => Math.max(0, doneFlags.findIndex((x) => !x)));
 
   const save = useCallback(async (body: typeof state) => {
     setSaveState({ kind: 'saving' });
     try {
       await PUT(`/logs/${logId}`, body);
       setLocalDraft(logId, null);
-      dirty.current = false;
       setSaveState({ kind: 'saved', at: new Date() });
     } catch (e) {
       setLocalDraft(logId, body);
@@ -198,7 +208,6 @@ function Logger({ d }: { d: any }) {
   const update = (fn: (s: typeof state) => typeof state) => {
     setState((prev) => {
       const next = fn(prev);
-      dirty.current = true;
       setLocalDraft(logId, next);
       clearTimeout(tm.current);
       tm.current = setTimeout(() => save(next), 1200);
@@ -226,16 +235,28 @@ function Logger({ d }: { d: any }) {
       setFinishErr(e);
     }
   };
+  const n = state.entries.length;
 
   return (
     <div>
-      <Header d={d} />
-      <div className="tiny muted" aria-live="polite" style={{ marginBottom: 8 }}>
-        {saveState.kind === 'saving' && t('common.saving')}
-        {saveState.kind === 'saved' && t('training.draftSaved', { time: saveState.at!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}
-        {saveState.kind === 'local' && t('training.draftLocal')}
-        {saveState.kind === 'error' && <span style={{ color: 'var(--danger)' }}>{t('common.error')}</span>}
+      <div className="logtop">
+        <div className="row between nowrap">
+          <h2 style={{ margin: 0, fontSize: '1.15rem' }}>{d.workout.title}</h2>
+          <span className="tiny muted" aria-live="polite">
+            {saveState.kind === 'saving' && t('common.saving')}
+            {saveState.kind === 'saved' && t('training.draftSaved', { time: saveState.at!.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}
+            {saveState.kind === 'local' && t('training.draftLocal')}
+            {saveState.kind === 'error' && <span style={{ color: 'var(--danger)' }}>{t('common.error')}</span>}
+          </span>
+        </div>
+        <div className="row between small" style={{ margin: '0.3rem 0' }}>
+          <span className="bold">{t('log.done', { d: doneCount, n })}</span>
+          {d.versionNo && <span className="tiny muted">{t('common.version')} <N>{d.versionNo}</N></span>}
+        </div>
+        <div className="progressbar" role="progressbar" aria-valuemin={0} aria-valuemax={n} aria-valuenow={doneCount} aria-label={t('log.done', { d: doneCount, n })}><i style={{ width: `${n ? (doneCount / n) * 100 : 0}%` }} /></div>
       </div>
+      {d.workout.notes && <p className="pre small muted" style={{ margin: '0.6rem 0' }}>{d.workout.notes}</p>}
+      <p className="tiny muted" style={{ margin: '0.5rem 0 0.75rem' }}>{t('log.tapHint')}</p>
 
       {state.entries.map((e, idx) => {
         const item = e.program_item_id ? itemsById.get(e.program_item_id) : null;
@@ -243,82 +264,118 @@ function Logger({ d }: { d: any }) {
         const ex = d.exercises[e.exercise_id];
         const prescribedEx = d.exercises[prescribedId];
         const prev = d.previous[e.exercise_id];
-        const logType = ex?.log_type ?? item?.log_type ?? 'strength';
+        const logType = logTypeOf(e);
         const alts = prescribedEx?.alternatives ?? [];
-        const allDone = logType === 'strength' ? (e.data.sets ?? []).length > 0 && (e.data.sets ?? []).every((x) => x.done) : logType === 'practice' ? !!e.data.completed : false;
+        const done = doneFlags[idx];
+        const expanded = open === idx;
+        const demo = ex?.demo && (ex.demo.hasFile || ex.demo.external_url) ? ex.demo : null;
+        const sets = e.data.sets ?? [];
+        const summary = done ? actualParts(e.data, logType, t) : item ? prescriptionParts(item.prescription, item.log_type, t) : [];
+        const goNext = () => {
+          const nxt = doneFlags.findIndex((x, j) => j > idx && !x);
+          if (nxt >= 0) setOpen(nxt);
+        };
         return (
-          <section key={idx} className={'exercise' + (allDone ? ' done' : '')} aria-label={ex?.name}>
-            <div className="row between nowrap">
-              <h3 style={{ margin: 0 }}>{ex?.name ?? item?.exercise_name}</h3>
-              {allDone && <span className="badge ok"><Icon name="check" /></span>}
-            </div>
-            {e.exercise_id !== prescribedId && <div className="small muted">{t('training.swapped', { name: prescribedEx?.name ?? '' })}</div>}
-            {item && <div className="presc" style={{ margin: '6px 0' }}>{t('training.prescribed')}: <Parts parts={prescriptionParts(item.prescription, item.log_type, t)} /></div>}
-            {item?.notes && <div className="small">{item.notes}</div>}
-            {ex?.cues && <details className="small"><summary>{t('training.cues')}</summary><p className="pre">{ex.cues}</p></details>}
-            <div className="prev">{prev ? <>{t('training.lastTime', { date: prev.date })}: <Parts parts={actualParts(prev.data, logType, t)} sep=", " /></> : t('training.noPrevious')}</div>
-            <div className="row" style={{ margin: '6px 0' }}>
-              <VideoButton media={ex?.demo} label={t('training.watchDemo')} />
-              <VideoButton media={ex?.practice} label={t('training.followAlong')} />
-              {alts.length > 0 && (
-                <select className="input" style={{ width: 'auto', minHeight: 36 }} aria-label={t('training.swap')} value={e.exercise_id}
-                  onChange={(ev) => setEntry(idx, { exercise_id: ev.target.value, data: d.exercises[ev.target.value]?.log_type === 'strength' ? { sets: (e.data.sets ?? [{}]).map(() => ({ reps: null, weight: null, unit: 'kg', done: false })) } : {} })}>
-                  <option value={prescribedId}>{prescribedEx?.name}</option>
-                  {alts.map((a: any) => <option key={a.id} value={a.id}>{t('training.swap')}: {a.name}</option>)}
-                </select>
+          <section key={idx} className={'exercise' + (done ? ' done' : '')} aria-label={ex?.name}>
+            <div className="row nowrap" style={{ paddingInlineEnd: '0.85rem' }}>
+              <button type="button" className="ex-head" aria-expanded={expanded} onClick={() => setOpen(expanded ? -1 : idx)}>
+                <span className={'ex-num' + (done ? ' on' : '')} aria-hidden="true">{done ? <Icon name="check" size={15} /> : idx + 1}</span>
+                <span className="grow">
+                  <span className="tiny muted" style={{ display: 'block' }}>{t('log.exerciseOf', { i: idx + 1, n })}{done ? ` · ${t('status.completed')}` : ''}</span>
+                  <span className="bold" style={{ display: 'block', fontSize: '1.05rem' }}>{ex?.name ?? item?.exercise_name}</span>
+                  {!expanded && summary.length > 0 && <span className="small muted"><Parts parts={summary} /></span>}
+                </span>
+              </button>
+              {demo ? (
+                <button type="button" className="ex-thumb" onClick={() => setVideo(demo)} aria-label={`${t('training.watchDemo')}: ${ex?.name}`}>
+                  <Cover category={ex?.category} showTag={false} /><span className="play-mini"><Icon name="play" size={22} filled /></span>
+                </button>
+              ) : (
+                <span className="ex-thumb" aria-hidden="true"><Cover category={ex?.category} showTag={false} /></span>
               )}
             </div>
-
-            {logType === 'strength' && (
-              <StrengthSets sets={e.data.sets ?? []} presc={item?.prescription ?? {}} prev={prev?.data?.sets}
-                onChange={(sets) => setData(idx, { sets })}
-                onDone={() => item?.prescription?.restSec && setTimer(Date.now() + item.prescription.restSec * 1000)} />
-            )}
-            {logType === 'circuit' && (
-              <div className="grid3">
-                <Field label={t('training.rounds')}><NumInput value={e.data.rounds} onChange={(v) => setData(idx, { rounds: v })} /></Field>
-                <Field label={t('training.reps')}><NumInput value={e.data.reps} onChange={(v) => setData(idx, { reps: v })} /></Field>
-                <Field label={t('training.workSec')}><NumInput value={e.data.workSec} onChange={(v) => setData(idx, { workSec: v })} /></Field>
-                <Field label={t('training.restSec')}><NumInput value={e.data.restSec} onChange={(v) => setData(idx, { restSec: v })} /></Field>
-              </div>
-            )}
-            {logType === 'running' && <RunFields data={e.data} onChange={(p) => setData(idx, p)} />}
-            {logType === 'practice' && (
-              <div className="stack">
-                <label className="check"><input type="checkbox" checked={!!e.data.completed} onChange={(ev) => setData(idx, { completed: ev.target.checked, durationSec: e.data.durationSec ?? (item?.prescription?.durationMin ? item.prescription.durationMin * 60 : null) })} /><span>{t('training.completedPractice')}</span></label>
-                <div className="row">
-                  <Field label={t('training.duration')}><NumInput value={e.data.durationSec != null ? Math.round(e.data.durationSec / 60) : null} onChange={(v) => setData(idx, { durationSec: v == null ? null : v * 60 })} /></Field>
+            {expanded && (
+              <div className="ex-body stack">
+                {e.exercise_id !== prescribedId && <div className="small muted">{t('training.swapped', { name: prescribedEx?.name ?? '' })}</div>}
+                {item && (
                   <div>
-                    <div className="small muted">{t('training.difficulty')}</div>
-                    <Seg value={(e.data.difficulty ?? '') as any} onChange={(v) => setData(idx, { difficulty: v as any })} options={(['easy', 'ok', 'hard'] as const).map((k) => ({ value: k, label: t(('diff.' + k) as StringKey) }))} />
+                    <div className="label" style={{ marginBottom: 4 }}>{t('training.prescribed')}</div>
+                    <div className="presc-chips">{prescriptionParts(item.prescription, item.log_type, t).map((p, i) => <span key={i} className="tag"><bdi>{p}</bdi></span>)}</div>
                   </div>
+                )}
+                {item?.notes && <div className="small">{item.notes}</div>}
+                <div className="prevbox"><Icon name="history" size={18} />
+                  {prev ? <span><span className="muted">{t('training.lastTime', { date: prev.date })}: </span><span className="bold"><Parts parts={actualParts(prev.data, logType, t)} sep=", " /></span></span> : <span className="muted">{t('training.noPrevious')}</span>}
                 </div>
+                {ex?.cues && <details className="small"><summary className="bold" style={{ cursor: 'pointer' }}>{t('training.cues')}</summary><p className="pre" style={{ marginTop: 4 }}>{ex.cues}</p></details>}
+                <div className="row">
+                  <VideoButton media={ex?.demo} label={t('training.watchDemo')} />
+                  <VideoButton media={ex?.practice} label={t('training.followAlong')} />
+                  {alts.length > 0 && (
+                    <select className="input" style={{ width: 'auto', minHeight: '2.25rem' }} aria-label={t('training.swap')} value={e.exercise_id}
+                      onChange={(ev) => setEntry(idx, { exercise_id: ev.target.value, data: d.exercises[ev.target.value]?.log_type === 'strength' ? { sets: (sets.length ? sets : [{}]).map(() => ({ reps: null, weight: null, unit: 'kg', done: false })) } : {} })}>
+                      <option value={prescribedId}>{prescribedEx?.name}</option>
+                      {alts.map((a: any) => <option key={a.id} value={a.id}>{t('training.swap')}: {a.name}</option>)}
+                    </select>
+                  )}
+                </div>
+
+                {logType === 'strength' && (
+                  <StrengthSets sets={sets} presc={item?.prescription ?? {}} prev={prev?.data?.sets}
+                    onChange={(next) => {
+                      setData(idx, { sets: next });
+                      if (next.length && next.every((x) => x.done)) goNext();
+                    }}
+                    onDone={() => item?.prescription?.restSec && setTimer({ endsAt: Date.now() + item.prescription.restSec * 1000, total: item.prescription.restSec })} />
+                )}
+                {logType === 'circuit' && (
+                  <div className="grid3">
+                    <Field label={t('training.rounds')}><NumInput value={e.data.rounds} onChange={(v) => setData(idx, { rounds: v })} /></Field>
+                    <Field label={t('training.reps')}><NumInput value={e.data.reps} onChange={(v) => setData(idx, { reps: v })} /></Field>
+                    <Field label={t('training.workSec')}><NumInput value={e.data.workSec} onChange={(v) => setData(idx, { workSec: v })} /></Field>
+                    <Field label={t('training.restSec')}><NumInput value={e.data.restSec} onChange={(v) => setData(idx, { restSec: v })} /></Field>
+                  </div>
+                )}
+                {logType === 'running' && <RunFields data={e.data} onChange={(p) => setData(idx, p)} />}
+                {logType === 'practice' && (
+                  <div className="stack">
+                    <label className="check"><input type="checkbox" checked={!!e.data.completed} onChange={(ev) => setData(idx, { completed: ev.target.checked, durationSec: e.data.durationSec ?? (item?.prescription?.durationMin ? item.prescription.durationMin * 60 : null) })} /><span>{t('training.completedPractice')}</span></label>
+                    <div className="row">
+                      <Field label={t('training.duration')}><NumInput value={e.data.durationSec != null ? Math.round(e.data.durationSec / 60) : null} onChange={(v) => setData(idx, { durationSec: v == null ? null : v * 60 })} /></Field>
+                      <div>
+                        <div className="label">{t('training.difficulty')}</div>
+                        <Seg value={(e.data.difficulty ?? '') as any} onChange={(v) => setData(idx, { difficulty: v as any })} options={(['easy', 'ok', 'hard'] as const).map((k) => ({ value: k, label: t(('diff.' + k) as StringKey) }))} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <details>
+                  <summary className="small muted" style={{ cursor: 'pointer', minHeight: '2rem' }}>{t('common.notes')} · {t('training.uploadVideo')}</summary>
+                  <div className="stack" style={{ marginTop: 6 }}>
+                    <TextArea value={e.notes ?? ''} onChange={(ev) => setEntry(idx, { notes: ev.target.value })} placeholder={t('common.notes')} />
+                    <Uploader createPath={`/clients/${user.id}/media`} meta={{ kind: 'submission', title: ex?.name ?? 'video', context: { logId, exerciseId: e.exercise_id } }} accept="video/*" label={t('training.uploadVideo')} onDone={() => undefined} />
+                  </div>
+                </details>
               </div>
             )}
-            <details style={{ marginTop: 6 }}>
-              <summary className="small muted">{t('common.notes')} / {t('training.uploadVideo')}</summary>
-              <div className="stack" style={{ marginTop: 6 }}>
-                <TextArea value={e.notes ?? ''} onChange={(ev) => setEntry(idx, { notes: ev.target.value })} placeholder={t('common.notes')} />
-                <Uploader createPath={`/clients/${user.id}/media`} meta={{ kind: 'submission', title: ex?.name ?? 'video', context: { logId, exerciseId: e.exercise_id } }} accept="video/*" label={t('training.uploadVideo')} onDone={() => undefined} />
-              </div>
-            </details>
           </section>
         );
       })}
 
       <div className="savebar">
-        <button className="btn primary big" onClick={() => setFinishOpen(true)}>{t('training.finish')}</button>
+        <button className="btn primary big" onClick={() => setFinishOpen(true)}><Icon name="check" /> {t('training.finish')}</button>
       </div>
 
-      {timer && <RestTimer endsAt={timer} onClose={() => setTimer(null)} onAdd={(sec) => setTimer((x) => (x ?? Date.now()) + sec * 1000)} />}
+      {timer && <RestTimer endsAt={timer.endsAt} total={timer.total} onClose={() => setTimer(null)} onAdd={(sec) => setTimer((x) => (x ? { endsAt: x.endsAt + sec * 1000, total: x.total + sec } : x))} />}
+      {video && <VideoModal media={video} onClose={() => setVideo(null)} />}
 
       {finishOpen && (
         <Modal title={t('training.finish')} onClose={() => setFinishOpen(false)}>
           <div className="stack">
             <Field label={t('training.sessionRpe')}>
               <div className="seg">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                  <button key={n} type="button" className={state.session_rpe === n ? 'on' : ''} onClick={() => update((s) => ({ ...s, session_rpe: n }))}><span className="num">{n}</span></button>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((k) => (
+                  <button key={k} type="button" className={state.session_rpe === k ? 'on' : ''} aria-pressed={state.session_rpe === k} onClick={() => update((s) => ({ ...s, session_rpe: k }))}><span className="num">{k}</span></button>
                 ))}
               </div>
             </Field>
@@ -335,36 +392,37 @@ function Logger({ d }: { d: any }) {
 
 function StrengthSets({ sets, presc, prev, onChange, onDone }: { sets: StrengthSet[]; presc: any; prev?: StrengthSet[]; onChange: (s: StrengthSet[]) => void; onDone: () => void }) {
   const { t } = useI18n();
+  const unit = presc.loadUnit ?? 'kg';
   const set = (i: number, patch: Partial<StrengthSet>) => onChange(sets.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   return (
     <div>
-      <div className="setrow tiny muted">
-        <span className="idx">{t('training.set')}</span>
-        <span className="center">{t('training.reps')}</span>
-        <span className="center">{t('training.weight')} ({presc.loadUnit ?? 'kg'})</span>
-        <span />
+      <div className="setgrid">
+        <span className="hdr">{t('training.set')}</span>
+        <span className="hdr">{t('training.reps')}</span>
+        <span className="hdr">{t('training.weight')} (<bdi>{unit}</bdi>)</span>
+        <span className="hdr" aria-hidden="true">✓</span>
+        {sets.map((s, i) => {
+          const p = prev?.[i];
+          return (
+            <Fragment key={i}>
+              <span className="setidx num">{i + 1}</span>
+              <NumInput className={s.done ? 'done' : ''} ariaLabel={`${t('training.set')} ${i + 1} · ${t('training.reps')}`} value={s.reps} onChange={(v) => set(i, { reps: v })} placeholder={String(p?.reps ?? presc.reps ?? '')} step="1" />
+              <NumInput className={s.done ? 'done' : ''} ariaLabel={`${t('training.set')} ${i + 1} · ${t('training.weight')}`} value={s.weight} onChange={(v) => set(i, { weight: v })} placeholder={String(p?.weight ?? presc.load ?? '')} />
+              <button type="button" className={'setcheck' + (s.done ? ' on' : '')} aria-pressed={!!s.done} aria-label={`${t('training.set')} ${i + 1}: ${s.done ? t('status.completed') : t('common.save')}`}
+                onClick={() => {
+                  // Tapping ✓ on an empty set copies the placeholder (last time or prescription) — minimal typing.
+                  const reps = s.reps ?? p?.reps ?? presc.reps ?? null;
+                  const weight = s.weight ?? p?.weight ?? presc.load ?? null;
+                  set(i, { done: !s.done, reps, weight, unit });
+                  if (!s.done) onDone();
+                }}>
+                <Icon name="check" size={22} />
+              </button>
+            </Fragment>
+          );
+        })}
       </div>
-      {sets.map((s, i) => {
-        const p = prev?.[i];
-        return (
-          <div className="setrow" key={i}>
-            <span className="idx num">{i + 1}</span>
-            <NumInput ariaLabel={`${t('training.reps')} ${i + 1}`} value={s.reps} onChange={(v) => set(i, { reps: v })} placeholder={String(p?.reps ?? presc.reps ?? '')} step="1" />
-            <NumInput ariaLabel={`${t('training.weight')} ${i + 1}`} value={s.weight} onChange={(v) => set(i, { weight: v })} placeholder={String(p?.weight ?? presc.load ?? '')} />
-            <button type="button" className={'setcheck' + (s.done ? ' on' : '')} aria-pressed={!!s.done} aria-label={`${t('training.set')} ${i + 1} ✓`}
-              onClick={() => {
-                // Tapping ✓ on an empty set copies the placeholder (last time or prescription) — minimal typing.
-                const reps = s.reps ?? p?.reps ?? presc.reps ?? null;
-                const weight = s.weight ?? p?.weight ?? presc.load ?? null;
-                set(i, { done: !s.done, reps, weight, unit: presc.loadUnit ?? 'kg' });
-                if (!s.done) onDone();
-              }}>
-              <Icon name="check" />
-            </button>
-          </div>
-        );
-      })}
-      <button type="button" className="btn small ghost" onClick={() => onChange([...sets, { reps: null, weight: sets[sets.length - 1]?.weight ?? null, unit: presc.loadUnit ?? 'kg', done: false }])}>{t('training.addSet')}</button>
+      <button type="button" className="btn small ghost" style={{ marginTop: 6 }} onClick={() => onChange([...sets, { reps: null, weight: sets[sets.length - 1]?.weight ?? null, unit, done: false }])}><Icon name="plus" size={18} /> {t('training.addSet').replace('+ ', '')}</button>
     </div>
   );
 }

@@ -3,12 +3,12 @@ import { useParams } from 'react-router';
 import { useI18n } from '../i18n/index.tsx';
 import { useUser } from '../auth.tsx';
 import { useApi, POST } from '../api.ts';
-import { Async, Field, Input, NumInput, TextArea, ErrorBox, Modal, Select, useDateLabel, N } from '../components/ui.tsx';
+import { Async, Field, Input, NumInput, TextArea, ErrorBox, Modal, Select, useDateLabel, N, Icon } from '../components/ui.tsx';
 import { GoalChart, AdherenceBars } from '../components/charts.tsx';
 import { MediaPlayer, Uploader } from '../components/media.tsx';
 import { GoalForm } from '../coach/GoalForm.tsx';
 import { targetStatus, changeFromBaseline, latestMeasurement } from '../../../shared/goals.ts';
-import { todayISO } from '../../../shared/dates.ts';
+import { todayISO, daysBetween } from '../../../shared/dates.ts';
 import type { StringKey } from '../i18n/strings.ts';
 
 export function GoalDetail() {
@@ -45,15 +45,20 @@ function Inner({ d, reload }: { d: any; reload: () => void }) {
   const withMedia = valid.filter((m: any) => m.media_id && m.media_status === 'ready');
   const canRecord = g.kind !== 'adherence' && (isCoach || g.client_can_record);
 
+  const daysSinceLast = latest ? daysBetween(latest.date, todayISO()) : null;
+  const firstMedia = withMedia[0];
+  const lastMedia = withMedia[withMedia.length - 1];
   return (
     <div>
-      <div className="row between">
-        <h1 style={{ margin: 0 }}>{g.title}</h1>
-        {isCoach && <button className="btn small" onClick={() => setEditing(true)}>{t('common.edit')}</button>}
+      <div className="row between nowrap">
+        <div className="grow">
+          <div className="eyebrow"><Icon name="target" size={16} /> {t(('kind.' + g.kind) as StringKey)}{g.kind !== 'quality' && g.kind !== 'adherence' && g.direction ? ` · ${t(('dir.' + g.direction) as StringKey)}` : ''}</div>
+          <h1 style={{ margin: 0 }}>{g.title}</h1>
+        </div>
+        {isCoach && <button className="iconbtn" onClick={() => setEditing(true)} aria-label={t('common.edit')}><Icon name="edit" size={18} /></button>}
       </div>
-      <div className="row small muted" style={{ margin: '4px 0 10px' }}>
-        <span className="badge">{t(('kind.' + g.kind) as StringKey)}</span>
-        {g.direction && g.kind !== 'quality' && <span>{t(('dir.' + g.direction) as StringKey)}</span>}
+      {(g.metric || g.unit) && <div className="small muted" style={{ marginTop: 4 }}>{t('progress.metricLine', { m: g.metric ?? '–', u: g.unit ?? '–' })}</div>}
+      <div className="row small muted" style={{ margin: '4px 0 12px' }}>
         {g.review_date && <span>{t('progress.reviewDate')}: {dateLabel(g.review_date)}</span>}
         {g.method_version > 1 && <span className="badge warn">{t('progress.methodV', { v: g.method_version })}</span>}
       </div>
@@ -65,16 +70,36 @@ function Inner({ d, reload }: { d: any; reload: () => void }) {
           <AdherenceBars weeks={d.adherence ?? []} target={g.target_value} />
         </div>
       ) : g.kind === 'quality' ? (
-        <div className="card soft small">{t('progress.qualityNote')}{g.criteria?.length ? <ul>{g.criteria.map((c: string) => <li key={c}>{c}</li>)}</ul> : null}</div>
+        <div className="card sage small"><strong>{t('progress.qualityTitle')}</strong><div>{t('progress.qualityNote')}</div>{g.criteria?.length ? <ul style={{ margin: '0.4rem 0 0' }}>{g.criteria.map((c: string) => <li key={c}>{c}</li>)}</ul> : null}</div>
       ) : (
-        <div className="card">
-          <div className="grid3" style={{ marginBottom: 8 }}>
-            <div><div className="tiny muted">{t('progress.baseline')}</div><div className="bold num">{fmtNum(g.baseline_value)} {g.unit}</div><div className="tiny muted">{g.baseline_date && dateLabel(g.baseline_date)}</div></div>
-            <div><div className="tiny muted">{g.direction === 'range' ? t('progress.targetRange') : t('progress.target')}</div><div className="bold num">{g.direction === 'range' ? `${fmtNum(g.target_min)}–${fmtNum(g.target_max)}` : fmtNum(g.target_value)} {g.unit}</div></div>
-            <div><div className="tiny muted">{t('progress.latest')}</div><div className="bold num">{latest ? `${fmtNum(latest.value)} ${g.unit ?? ''}` : '–'}</div>{delta != null && <div className="tiny muted">{t('progress.fromBaseline', { v: (delta > 0 ? '+' : '') + fmtNum(delta) })}</div>}</div>
+        <>
+          <div className="statgrid" style={{ marginBottom: '0.9rem' }}>
+            <div className="stat"><div className="label">{t('progress.baseline')}</div><div className="value"><bdi>{fmtNum(g.baseline_value)}</bdi></div><div className="tiny muted">{g.unit} · {g.baseline_date ? dateLabel(g.baseline_date) : '–'}</div></div>
+            <div className="stat hl"><div className="label">{t('progress.latest')}</div><div className="value"><bdi>{latest ? fmtNum(latest.value) : '–'}</bdi></div><div className="tiny muted">{latest ? `${g.unit ?? ''} · ${dateLabel(latest.date)}` : t('progress.noData')}</div></div>
+            <div className="stat"><div className="label">{g.direction === 'range' ? t('progress.targetRange') : t('progress.target')}</div><div className="value"><bdi>{g.direction === 'range' ? `${fmtNum(g.target_min)}–${fmtNum(g.target_max)}` : fmtNum(g.target_value)}</bdi></div><div className="tiny muted">{g.unit}</div></div>
           </div>
-          {st !== 'no_data' && <span className={'badge ' + (st === 'reached' ? 'ok' : '')}>{st === 'reached' ? t('progress.reached') : t('progress.notReached')}</span>}
-          <GoalChart points={points} baseline={g.baseline_value} target={g.direction !== 'range' ? g.target_value : null} targetMin={g.target_min} targetMax={g.target_max} unit={g.unit} selectedId={selected} onSelect={setSelected} />
+          <div className="row" style={{ marginBottom: '0.6rem' }}>
+            {st !== 'no_data' && <span className={'badge ' + (st === 'reached' ? 'ok' : '')}>{st === 'reached' ? <><Icon name="check" />{t('progress.reached')}</> : <><Icon name="progress" />{t('progress.notReached')}</>}</span>}
+            {delta != null && <span className="badge"><bdi>{t('progress.fromBaseline', { v: (delta > 0 ? '+' : '') + fmtNum(delta) })}</bdi></span>}
+            {daysSinceLast != null && daysSinceLast > 21 && <span className="badge warn">{t('progress.sinceLast', { date: dateLabel(latest!.date) })}</span>}
+          </div>
+          <div className="card">
+            <GoalChart points={points} baseline={g.baseline_value} target={g.direction !== 'range' ? g.target_value : null} targetMin={g.target_min} targetMax={g.target_max} unit={g.unit} selectedId={selected} onSelect={setSelected} />
+          </div>
+        </>
+      )}
+
+      {withMedia.length >= 2 && (
+        <div className="card">
+          <div className="card-title"><h3><Icon name="video" size={18} /> {t('progress.compare')}</h3><button className="btn small ghost" onClick={() => setCompare([firstMedia.id, lastMedia.id])}>{t('common.edit')}</button></div>
+          <div className="compare">
+            {[firstMedia, lastMedia].map((m: any) => (
+              <div key={m.id} className="stack">
+                <MediaPlayer media={{ id: m.media_id, title: m.media_title, mime: m.media_mime }} />
+                <div className="small"><bdi className="bold">{dateLabel(m.measured_on)}</bdi>{m.value != null && <> · <bdi>{fmtNum(m.value)} {g.unit}</bdi></>}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -87,11 +112,7 @@ function Inner({ d, reload }: { d: any; reload: () => void }) {
         </div>
       )}
 
-      {canRecord && <button className="btn primary big" onClick={() => setAdding(true)} style={{ marginBottom: '0.9rem' }}>{t('progress.addMeasurement')}</button>}
-
-      {withMedia.length >= 2 && (
-        <button className="btn" style={{ marginBottom: '0.9rem' }} onClick={() => setCompare([withMedia[0].id, withMedia[withMedia.length - 1].id])}>{t('progress.compare')}</button>
-      )}
+      {canRecord && <button className="btn primary big" onClick={() => setAdding(true)} style={{ marginBottom: '0.9rem' }}><Icon name="plus" /> {t('progress.addMeasurement')}</button>}
 
       {g.kind !== 'adherence' && (
         <div className="card">

@@ -31,7 +31,7 @@ class C {
 }
 
 const coachId = newId();
-insert(db, 'users', { id: coachId, email: 'coach@demo.local', name: 'Talya (Demo)', password_hash: await hashPassword(PW), role: 'coach', locale: 'he', is_demo: 1, created_at: now() });
+insert(db, 'users', { id: coachId, email: 'coach@demo.local', name: 'טליה (דמו)', password_hash: await hashPassword(PW), role: 'coach', locale: 'he', is_demo: 1, created_at: now() });
 insert(db, 'coach_settings', { coach_id: coachId, response_expectation: 'א׳–ה׳, עד 48 שעות (דמו)', whatsapp_url: null, week_start_day: 0, updated_at: now() });
 const coach = new C();
 await coach.r('POST', '/auth/login', { email: 'coach@demo.local', password: PW });
@@ -44,41 +44,44 @@ async function client(email: string, name: string) {
   run(db, 'UPDATE users SET is_demo = 1 WHERE id = ?', me.user.id);
   return { c, id: me.user.id as string };
 }
-const noa = await client('noa@demo.local', 'Noa (Demo)');
-const dan = await client('dan@demo.local', 'Dan (Demo)');
+const noa = await client('noa@demo.local', 'נועה (דמו)');
+const dan = await client('dan@demo.local', 'דן (דמו)');
 await noa.c.r('PUT', `/clients/${noa.id}/onboarding`, { goals: 'להתחזק ולהרגיש יציבה יותר בגב התחתון (דמו)', experience: 'פילאטיס פעם בשבוע, שנה', availability: 'א׳, ג׳, ה׳ בבוקר', daysPerWeek: 3, equipment: 'משקולות 4–12 ק״ג, גומיות, מזרן', considerations: 'רגישות בברך ימין (דמו)', nutritionInterest: 'יומן בסיסי', consent: true });
 
 const ex = async (body: any) => (await coach.r('POST', '/exercises', body)).id as string;
-const goblet = await ex({ name: 'Goblet squat', category: 'strength', log_type: 'strength', purpose: 'Leg strength and squat pattern', prerequisites: 'Pain-free squat to a box', starting_prescription: '3 × 8–10 @ RPE 7', cues: 'Weight in mid-foot\nRibs down\nKnees track over toes', progression_criteria: 'All sets at top of range with RPE ≤ 7 → +2 kg', equipment: 'Dumbbell / kettlebell', level: 'Beginner' });
-const boxSquat = await ex({ name: 'Box squat', category: 'strength', log_type: 'strength', purpose: 'Squat with depth control', cues: 'Touch the box, don’t sit', level: 'Beginner' });
-const rdl = await ex({ name: 'Romanian deadlift', category: 'strength', log_type: 'strength', purpose: 'Hip hinge strength', cues: 'Soft knees\nPush hips back\nNeutral spine', progression_criteria: '3 × 10 smooth → +2 kg' });
-const row = await ex({ name: 'One-arm dumbbell row', category: 'strength', log_type: 'strength', purpose: 'Upper-back strength', cues: 'Pull elbow to hip' });
-const pushup = await ex({ name: 'Incline push-up', category: 'functional', log_type: 'strength', purpose: 'Pressing strength', cues: 'Body in one line' });
-const hipFlow = await ex({ name: 'Hip mobility flow', category: 'mobility', log_type: 'practice', purpose: 'Hip rotation and flexion range', cues: 'Breathe slowly; stay in a comfortable range' });
-const core = await ex({ name: 'Pilates core sequence', category: 'pilates', log_type: 'practice', purpose: 'Deep core control' });
-const easyRun = await ex({ name: 'Easy run', category: 'running', log_type: 'running', purpose: 'Aerobic base', cues: 'Conversational pace' });
-const circuit = await ex({ name: 'Conditioning circuit', category: 'functional', log_type: 'circuit', purpose: 'Work capacity' });
-await coach.r('PUT', `/exercises/${goblet}`, { alternatives: [{ id: boxSquat, note: 'If the knee is sensitive' }] });
+const goblet = await ex({ name: 'סקוואט גביע', category: 'strength', log_type: 'strength', purpose: 'כוח רגליים ודפוס סקוואט נקי', prerequisites: 'סקוואט לקופסה ללא כאב', starting_prescription: '3 × 8–10 ב־RPE 7', cues: 'משקל באמצע כף הרגל\nצלעות למטה\nברכיים בכיוון האצבעות', progression_criteria: 'כל הסטים בראש הטווח ב־RPE ≤ 7 → להוסיף 2 ק״ג', equipment: 'קטלבל', level: 'beginner' });
+const boxSquat = await ex({ name: 'סקוואט לקופסה', category: 'strength', log_type: 'strength', purpose: 'סקוואט עם שליטה בעומק', cues: 'לגעת בקופסה בלי לשבת', equipment: 'קופסה', level: 'beginner' });
+const rdl = await ex({ name: 'דדליפט רומני', category: 'strength', log_type: 'strength', purpose: 'כוח בדפוס ציר ירך', cues: 'ברכיים רכות\nאגן אחורה\nגב ניטרלי', progression_criteria: '3 × 10 חלקים → להוסיף 2 ק״ג', equipment: 'משקולות' });
+const row = await ex({ name: 'חתירה במשקולת ביד אחת', category: 'strength', log_type: 'strength', purpose: 'כוח בגב העליון', cues: 'למשוך מרפק לכיוון הירך', equipment: 'משקולת' });
+const pushup = await ex({ name: 'שכיבות סמיכה בשיפוע', category: 'functional', log_type: 'strength', purpose: 'כוח דחיקה', cues: 'הגוף בקו אחד' });
+const hipFlow = await ex({ name: 'זרימת מוביליטי לירכיים', category: 'mobility', log_type: 'practice', purpose: 'טווח סיבוב וכפיפה בירכיים', cues: 'נשימה איטית, בטווח נוח' });
+const core = await ex({ name: 'רצף ליבה בפילאטיס', category: 'pilates', log_type: 'practice', purpose: 'שליטה בשרירי הליבה העמוקים' });
+const easyRun = await ex({ name: 'ריצה קלה', category: 'running', log_type: 'running', purpose: 'בסיס אירובי', cues: 'קצב שמאפשר לדבר' });
+const circuit = await ex({ name: 'מעגל כושר', category: 'functional', log_type: 'circuit', purpose: 'סבולת וכושר עבודה' });
+await coach.r('PUT', `/exercises/${goblet}`, { alternatives: [{ id: boxSquat, note: 'אם הברך רגישה' }] });
 run(db, 'UPDATE exercises SET is_demo = 1 WHERE coach_id = ?', coachId);
 
 const S = (sets: number, reps: number, load?: number, rest = 90, rpe = 7) => ({ sets, reps, ...(load != null ? { load, loadUnit: 'kg' } : {}), restSec: rest, rpe });
+const dow = new Date().getDay();
+const D = [dow, (dow + 2) % 7, (dow + 4) % 7];
 const week = (w: number) => [
-  { week_index: w, day_of_week: 0, title: 'Strength A', category: 'strength', est_minutes: 45, items: [
+  { week_index: w, day_of_week: D[0], title: 'כוח A — רגליים וגב', category: 'strength', level: 'beginner', est_minutes: 45, items: [
     { exercise_id: goblet, prescription: { ...S(3, 8, 10 + (w - 1)), repsMax: 10 } },
+    { exercise_id: rdl, prescription: S(3, 10, 12 + (w - 1) * 2) },
     { exercise_id: row, prescription: S(3, 10, 8) },
     { exercise_id: core, prescription: { durationMin: 10 } },
   ] },
-  { week_index: w, day_of_week: 2, title: 'Mobility & flexibility', category: 'mobility', est_minutes: 30, items: [
+  { week_index: w, day_of_week: D[1], title: 'מוביליטי וגמישות', category: 'mobility', level: 'beginner', est_minutes: 30, items: [
     { exercise_id: hipFlow, prescription: { durationMin: 20 } },
     { exercise_id: easyRun, prescription: { distanceKm: 3 + (w - 1) * 0.5 } },
   ] },
-  { week_index: w, day_of_week: 4, title: 'Strength B', category: 'strength', est_minutes: 45, items: [
-    { exercise_id: rdl, prescription: S(3, 10, 12 + (w - 1) * 2) },
+  { week_index: w, day_of_week: D[2], title: 'כוח B — פלג גוף עליון', category: 'functional', level: 'intermediate', est_minutes: 40, items: [
     { exercise_id: pushup, prescription: S(3, 8, undefined, 60) },
+    { exercise_id: row, prescription: S(3, 12, 8) },
     { exercise_id: circuit, prescription: { rounds: 3, reps: 10, workSec: 40, restSec: 20 } },
   ] },
 ];
-const tpl = await coach.r('POST', '/programs', { name: 'Foundations (Demo)', description: '4-week introductory block: two strength days and one mobility day.', length_weeks: 4, content: { workouts: [1, 2, 3, 4].flatMap(week) } });
+const tpl = await coach.r('POST', '/programs', { name: 'יסודות — 4 שבועות (דמו)', description: 'בלוק פתיחה: שני ימי כוח ויום מוביליטי.', length_weeks: 4, content: { workouts: [1, 2, 3, 4].flatMap(week) } });
 const start = weekStart(addDays(todayISO(), -7));
 const prog = await coach.r('POST', `/programs/${tpl.id}/assign`, { clientId: noa.id, startDate: start });
 run(db, 'UPDATE programs SET is_demo = 1 WHERE coach_id = ?', coachId);
@@ -98,17 +101,33 @@ for (const [i, s] of sched.entries()) {
       : { durationSec: (p.durationMin ?? 10) * 60, completed: true, difficulty: 'ok' };
     return { program_item_id: it.id, exercise_id: it.exercise_id, data };
   });
-  await noa.c.r('POST', `/logs/${logId}/finish`, { status: i === 1 ? 'partial' : 'completed', entries: i === 1 ? entries.slice(0, 1) : entries, session_rpe: 6, notes: i === 1 ? 'Only had 20 minutes (demo)' : null });
+  await noa.c.r('POST', `/logs/${logId}/finish`, { status: i === 1 ? 'partial' : 'completed', entries: i === 1 ? entries.slice(0, 1) : entries, session_rpe: 6, notes: i === 1 ? 'היו לי רק 20 דקות (דמו)' : null });
 }
 
-const g1 = await coach.r('POST', `/clients/${noa.id}/goals`, { title: 'Goblet squat reps @ 12 kg', kind: 'performance', metric: 'reps', unit: 'reps', direction: 'increase', baseline_value: 6, baseline_date: addDays(todayISO(), -21), target_value: 12, review_date: addDays(todayISO(), 35), procedure: 'After warm-up: one set to RPE 9, full depth, 2-second pause at bottom', conditions: { exerciseId: goblet, exerciseName: 'Goblet squat', load: 12, loadUnit: 'kg' }, show_on_today: true });
-await noa.c.r('POST', `/goals/${g1.id}/measurements`, { value: 8, measured_on: addDays(todayISO(), -10), notes: 'Felt solid (demo)' });
-await coach.r('POST', `/clients/${noa.id}/goals`, { title: 'Knee-to-wall ankle test (right)', kind: 'mobility', metric: 'distance', unit: 'cm', direction: 'increase', baseline_value: 7, baseline_date: addDays(todayISO(), -21), target_value: 11, procedure: 'Barefoot, heel down, measure toe-to-wall distance at max knee touch', conditions: { side: 'right' }, show_on_today: true });
-await coach.r('POST', `/clients/${noa.id}/goals`, { title: 'Planned sessions per week', kind: 'adherence', unit: 'sessions', direction: 'increase', target_value: 3, baseline_date: start });
-await coach.r('POST', `/clients/${noa.id}/goals`, { title: 'Pilates roll-up control', kind: 'quality', criteria: ['Smooth spinal articulation', 'No momentum from arms', 'Even breathing'] });
-await noa.c.r('PUT', `/clients/${noa.id}/checkins/${start}`, { energy: 4, sleep: 3, stress: 3, soreness: 2, enjoyment: 5, wins: 'Did two sessions (demo)', struggles: 'Busy Thursday' });
-await coach.r('POST', `/clients/${noa.id}/tasks`, { title: 'Film a side-view goblet squat for feedback', due_date: todayISO() });
-await coach.r('PUT', `/clients/${noa.id}/settings`, { nutrition: { mode: 'targets', kcal: 1900, protein: 100, guidance: 'Protein at every meal; vegetables at lunch and dinner. (demo)' } });
+const g1 = await coach.r('POST', `/clients/${noa.id}/goals`, { title: 'חזרות בסקוואט גביע עם 12 ק״ג', kind: 'performance', metric: 'חזרות בסט אחד', unit: 'חזרות', direction: 'increase', baseline_value: 6, baseline_date: addDays(todayISO(), -42), target_value: 12, review_date: addDays(todayISO(), 28), procedure: 'אחרי חימום: סט אחד עד RPE 9, עומק מלא, עצירה של 2 שניות למטה', conditions: { exerciseId: goblet, exerciseName: 'סקוואט גביע', load: 12, loadUnit: 'kg' }, show_on_today: true });
+for (const [days, v, note] of [[-35, 7, null], [-28, 7, 'עייפות אחרי שבוע עמוס'], [-21, 8, null], [-14, 9, 'הרגיש יציב'], [-4, 10, null]] as const)
+  await noa.c.r('POST', `/goals/${g1.id}/measurements`, { value: v, measured_on: addDays(todayISO(), days), notes: note });
+const g2 = await coach.r('POST', `/clients/${noa.id}/goals`, { title: 'מבחן ברך לקיר — קרסול ימין', kind: 'mobility', metric: 'מרחק בהונות מהקיר', unit: 'ס״מ', direction: 'increase', baseline_value: 7, baseline_date: addDays(todayISO(), -42), target_value: 11, procedure: 'יחפים, עקב על הרצפה, מודדים את המרחק המרבי שבו הברך נוגעת בקיר', conditions: { side: 'ימין' }, show_on_today: true });
+for (const [days, v] of [[-30, 7.5], [-24, 8], [-3, 9]] as const)
+  await noa.c.r('POST', `/goals/${g2.id}/measurements`, { value: v, measured_on: addDays(todayISO(), days) });
+await coach.r('POST', `/clients/${noa.id}/goals`, { title: 'אימונים מתוכננים בשבוע', kind: 'adherence', unit: 'אימונים', direction: 'increase', target_value: 3, baseline_date: start });
+await coach.r('POST', `/clients/${noa.id}/goals`, { title: 'שליטה ברול־אפ בפילאטיס', kind: 'quality', criteria: ['גלגול חוליה אחר חוליה', 'בלי תנופה מהידיים', 'נשימה רציפה'] });
+await noa.c.r('PUT', `/clients/${noa.id}/checkins/${start}`, { energy: 4, sleep: 3, stress: 3, soreness: 2, enjoyment: 5, wins: 'עשיתי שני אימונים (דמו)', struggles: 'יום חמישי היה עמוס' });
+await coach.r('POST', `/clients/${noa.id}/tasks`, { title: 'לצלם סקוואט גביע מהצד למשוב', due_date: todayISO() });
+await coach.r('PUT', `/clients/${noa.id}/settings`, { nutrition: { mode: 'targets', kcal: 1900, protein: 100, guidance: 'חלבון בכל ארוחה, ירקות בצהריים ובערב. (דמו)' } });
+
+// Guided follow-along practices (no video files yet: the app shows "video coming soon", never a broken player)
+const practices: [string, string, number, string, string | null, string][] = [
+  ['יוגה זורמת לבוקר', 'yoga', 20, 'beginner', null, 'רצף עדין להעיר את הגוף: חתול־פרה, כלב מביט מטה ולוחם 2.'],
+  ['פילאטיס — ליבה עמוקה', 'pilates', 15, 'beginner', 'מזרן', 'עבודה על שרירי הבטן העמוקים והנשימה.'],
+  ['פתיחת ירכיים', 'mobility', 12, 'beginner', null, 'שחרור הירכיים אחרי ישיבה ממושכת.'],
+  ['מתיחות ונשימה לפני שינה', 'flexibility', 10, 'beginner', null, 'מתיחות שקטות ונשימה איטית לסיום היום.'],
+  ['מוביליטי לכתפיים ולגב עליון', 'mobility', 18, 'intermediate', 'גומייה', 'פתיחת החזה ושיפור תנועת השכמות.'],
+  ['פילאטיס עם גומייה', 'pilates', 28, 'intermediate', 'גומייה, מזרן', 'חיזוק כללי עם התנגדות קלה.'],
+  ['יוגה לכוח ויציבות', 'yoga', 35, 'advanced', 'מזרן', 'עמידות שיווי משקל ומעברים איטיים.'],
+];
+for (const [title, category, min, level, equipment, purpose] of practices)
+  insert(db, 'media', { id: newId(), uploader_id: coachId, scope: 'library', coach_id: coachId, kind: 'follow_along', title, category, duration_sec: min * 60, level, equipment, purpose, instructions: 'הנחיות מפורטות יופיעו עם הסרטון. (תוכן הדגמה)', status: 'ready', is_demo: 1, created_at: now() });
 
 // Demo foods: approximate values, flagged source=demo so the UI says "verify".
 const food = async (name: string, kcal: number, protein: number, carbs: number, fat: number, serving_g?: number) => {
@@ -116,20 +135,20 @@ const food = async (name: string, kcal: number, protein: number, carbs: number, 
   run(db, "UPDATE foods SET source = 'demo', is_demo = 1 WHERE id = ?", r.id);
   return r.id as string;
 };
-const oats = await food('Rolled oats (demo)', 380, 13, 66, 7, 40);
-const yogurt = await food('Greek yogurt 2% (demo)', 75, 10, 4, 2, 150);
-const soy = await food('Soy yogurt (demo)', 60, 4, 5, 2.5, 150);
-const banana = await food('Banana (demo)', 90, 1, 22, 0.3, 120);
-await food('Tahini (demo)', 640, 20, 12, 55, 15);
-const rec = await coach.r('POST', '/recipes', { title: 'Overnight oats (Demo)', description: 'Breakfast you can prepare the night before.', servings: 2, prep_minutes: 5, visibility: 'clients', instructions: '1. Mix oats and yogurt.\n2. Refrigerate overnight.\n3. Top with banana.', ingredients: [
-  { food_id: oats, name: 'Rolled oats', grams: 80, display_qty: '1 cup' },
-  { food_id: yogurt, name: 'Greek yogurt', grams: 300, substitutions: [{ food_id: soy, name: 'Soy yogurt', grams: 300 }] },
-  { food_id: banana, name: 'Banana', grams: 120, display_qty: '1 medium' },
-  { name: 'Cinnamon', grams: 2, display_qty: 'pinch' },
+const oats = await food('שיבולת שועל (דמו)', 380, 13, 66, 7, 40);
+const yogurt = await food('יוגורט יווני 2% (דמו)', 75, 10, 4, 2, 150);
+const soy = await food('יוגורט סויה (דמו)', 60, 4, 5, 2.5, 150);
+const banana = await food('בננה (דמו)', 90, 1, 22, 0.3, 120);
+await food('טחינה גולמית (דמו)', 640, 20, 12, 55, 15);
+const rec = await coach.r('POST', '/recipes', { title: 'דייסת לילה (דמו)', description: 'ארוחת בוקר שמכינים מהערב.', servings: 2, prep_minutes: 5, visibility: 'clients', instructions: '1. לערבב שיבולת שועל ויוגורט.\n2. לקרר במשך הלילה.\n3. להוסיף בננה מעל.', ingredients: [
+  { food_id: oats, name: 'שיבולת שועל', grams: 80, display_qty: 'כוס' },
+  { food_id: yogurt, name: 'יוגורט יווני', grams: 300, substitutions: [{ food_id: soy, name: 'יוגורט סויה', grams: 300 }] },
+  { food_id: banana, name: 'בננה', grams: 120, display_qty: 'בינונית' },
+  { name: 'קינמון', grams: 2, display_qty: 'קורט' },
 ] });
 run(db, 'UPDATE recipes SET is_demo = 1 WHERE id = ?', rec.id);
 await noa.c.r('POST', `/clients/${noa.id}/food-entries`, { date: todayISO(), meal: 'breakfast', kind: 'recipe', recipe_id: rec.id, servings: 1 });
-await noa.c.r('POST', `/clients/${noa.id}/messages`, { body: 'היי טליה, האם אפשר להחליף את הריצה בהליכה מהירה? (דמו)' });
+await noa.c.r('POST', `/clients/${noa.id}/messages`, { body: 'היי טליה, אפשר להחליף את הריצה בהליכה מהירה? (דמו)' });
 
 console.log(`Demo data created (all flagged as demo). Password for all demo users: ${PW}
   coach@demo.local  — coach

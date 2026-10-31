@@ -40,7 +40,7 @@ authRoutes.get('/auth/me', (c) => {
   const db = c.get('db');
   let extra: Record<string, unknown> = {};
   const coachId = libraryCoachId(db, u);
-  const settings = coachId ? get(db, 'SELECT response_expectation, whatsapp_url, week_start_day FROM coach_settings WHERE coach_id = ?', coachId) : null;
+  const settings = coachId ? get(db, 'SELECT response_expectation, whatsapp_url, week_start_day, covers_json FROM coach_settings WHERE coach_id = ?', coachId) : null;
   if (u.role === 'client') {
     const p = get(db, 'SELECT onboarding_completed_at, nutrition_json FROM client_profiles WHERE client_id = ?', u.id);
     const coach = coachId ? get(db, 'SELECT name FROM users WHERE id = ?', coachId) : null;
@@ -56,6 +56,7 @@ authRoutes.get('/auth/me', (c) => {
     weekStartDay: settings?.week_start_day ?? 0,
     responseExpectation: settings?.response_expectation ?? null,
     whatsappUrl: settings?.whatsapp_url ?? null,
+    covers: settings?.covers_json ? JSON.parse(settings.covers_json) : {},
     ...extra,
   });
 });

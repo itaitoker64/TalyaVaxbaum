@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0" stop-color="#F3E7D3"/><stop offset="1" stop-color="#DCC29E"/></linearGradient></defs>
+<rect width="1200" height="900" fill="url(#g)"/>
+<path d="M-40 760 C 260 660, 520 860, 820 740 S 1180 680, 1260 720" fill="none" stroke="#fff" stroke-width="6" opacity="0.3"/>
+<ellipse cx="600" cy="690" rx="300" ry="34" fill="#8A7558" opacity="0.18"/>
+<path d="M330 470 Q 340 680 600 690 Q 860 680 870 470 Z" fill="#FBF6EC"/>
+<ellipse cx="600" cy="470" rx="270" ry="58" fill="#E9D7B8"/>
+<g fill="#C9A46B"><circle cx="500" cy="462" r="16"/><circle cx="540" cy="478" r="14"/><circle cx="640" cy="458" r="15"/><circle cx="690" cy="480" r="13"/><circle cx="580" cy="452" r="12"/></g>
+<g fill="#7E4A5A"><circle cx="610" cy="472" r="14"/><circle cx="655" cy="447" r="12"/><circle cx="525" cy="446" r="12"/></g>
+<path d="M720 440 C 760 400, 810 410, 820 440 C 790 460, 750 460, 720 440 Z" fill="#7E9471"/>
+<path d="M420 300 C 400 260, 440 240, 420 200 M600 280 C 580 240, 620 220, 600 180 M780 300 C 760 260, 800 240, 780 200" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+</svg>

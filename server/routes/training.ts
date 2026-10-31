@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { all, get, insert, run, update, now, newId, json, parse, tx, onlySent, type DB } from '../db.ts';
 import type { Env, AuthUser } from '../auth.ts';
-import { requireCoach, requireUser, requireClientAccess, notFound, badRequest, forbidden, isCoachOf } from '../access.ts';
+import { requireCoach, requireUser, requireClientAccess, notFound, badRequest, forbidden, isCoachOf, canAccessMedia } from '../access.ts';
 import { CATEGORIES, LOG_TYPES } from '../../shared/types.ts';
 import { scheduleDates } from '../../shared/schedule.ts';
 import { isISODate, todayISO } from '../../shared/dates.ts';
@@ -40,6 +40,7 @@ const Content = z.object({
         category: z.enum(CATEGORIES).nullable().optional(),
         notes: z.string().max(4000).nullable().optional(),
         est_minutes: z.number().int().min(0).max(600).nullable().optional(),
+        level: z.string().max(40).nullable().optional(),
         items: z
           .array(
             z.object({
@@ -86,7 +87,7 @@ function writeVersion(db: DB, programId: string, coachId: string, content: Conte
     const wid = newId();
     insert(db, 'program_workouts', {
       id: wid, version_id: vid, week_index: w.week_index, day_of_week: w.day_of_week, title: w.title,
-      category: w.category ?? null, notes: w.notes ?? null, est_minutes: w.est_minutes ?? null, sort: wi,
+      category: w.category ?? null, notes: w.notes ?? null, est_minutes: w.est_minutes ?? null, level: w.level ?? null, sort: wi,
     });
     w.items.forEach((it, ii) => {
       const ex = get(db, 'SELECT id, name, log_type FROM exercises WHERE id = ? AND coach_id = ?', it.exercise_id, coachId);
@@ -104,7 +105,7 @@ function writeVersion(db: DB, programId: string, coachId: string, content: Conte
 function contentFromVersion(db: DB, versionId: string): ContentT {
   return {
     workouts: versionContent(db, versionId).map((w) => ({
-      week_index: w.week_index, day_of_week: w.day_of_week, title: w.title, category: w.category, notes: w.notes, est_minutes: w.est_minutes,
+      week_index: w.week_index, day_of_week: w.day_of_week, title: w.title, category: w.category, notes: w.notes, est_minutes: w.est_minutes, level: w.level,
       items: w.items.map((i: any) => ({ exercise_id: i.exercise_id, block: i.block, prescription: i.prescription, notes: i.notes })),
     })),
   };
@@ -265,7 +266,9 @@ export function sessionsBetween(db: DB, clientId: string, from: string, to: stri
   return all(
     db,
     `SELECT s.id, s.date, s.status, s.moved_to_date, s.rescheduled_from_id, s.skip_reason, s.program_id, s.version_id,
-            w.title, w.category, w.est_minutes, w.notes AS workout_notes,
+            w.title, w.category, w.est_minutes, w.level, w.notes AS workout_notes,
+            (SELECT GROUP_CONCAT(DISTINCT e.equipment) FROM program_items i JOIN exercises e ON e.id = i.exercise_id
+             WHERE i.workout_id = w.id AND IFNULL(e.equipment, '') != '') AS equipment,
             (SELECT COUNT(*) FROM program_items i WHERE i.workout_id = w.id) AS item_count,
             l.id AS log_id, l.status AS log_status, l.coach_reviewed_at
      FROM scheduled_sessions s JOIN program_workouts w ON w.id = s.workout_id
@@ -299,7 +302,7 @@ function exerciseDetail(db: DB, exerciseId: string) {
   const e = get(db, 'SELECT * FROM exercises WHERE id = ?', exerciseId);
   if (!e) return null;
   const media = (id: string | null) =>
-    id ? get(db, "SELECT id, title, kind, duration_sec, external_url, mime, status, equipment, level, instructions, purpose FROM media WHERE id = ? AND status = 'ready'", id) ?? null : null;
+    id ? get(db, "SELECT id, title, kind, category, duration_sec, external_url, mime, status, equipment, level, instructions, purpose, cover_media_id, captions_media_id, file_key IS NOT NULL AS hasFile FROM media WHERE id = ? AND status = 'ready'", id) ?? null : null;
   return {
     id: e.id, name: e.name, category: e.category, log_type: e.log_type, purpose: e.purpose, cues: e.cues, equipment: e.equipment, level: e.level,
     prerequisites: e.prerequisites, progression_criteria: e.progression_criteria,
@@ -491,7 +494,7 @@ trainingRoutes.get('/clients/:cid/logs', (c) => {
   return c.json(
     all(
       c.get('db'),
-      `SELECT l.id, l.title, l.date, l.status, l.session_rpe, l.notes, l.completed_at, l.coach_reviewed_at,
+      `SELECT l.id, l.title, l.date, l.status, l.session_rpe, l.notes, l.completed_at, l.coach_reviewed_at, l.media_id,
               (SELECT COUNT(*) FROM messages m WHERE m.ref_type = 'workout_log' AND m.ref_id = l.id) AS feedback_count
        FROM workout_logs l WHERE l.client_id = ? AND l.status != 'draft' ORDER BY l.date DESC, l.completed_at DESC LIMIT ?`,
       cid, limit,
@@ -535,4 +538,36 @@ trainingRoutes.get('/clients/:cid/exercise-history', (c) => {
       cid, exerciseId,
     ).map((r) => ({ id: r.id, date: r.date, logId: r.log_id, notes: r.notes, substituted: !!r.substituted_for_id, data: parse(r.data_json, {}), prescription: parse(r.prescription_json, null) })),
   );
+});
+
+/** Logs a guided (follow-along) practice done from the library, outside the weekly schedule. */
+trainingRoutes.post('/clients/:cid/practice-logs', async (c) => {
+  const cid = c.req.param('cid');
+  const u = requireClientAccess(c, cid);
+  requireOwnClient(u, cid);
+  const b = z
+    .object({
+      media_id: z.string(),
+      date: z.string().refine(isISODate),
+      durationSec: z.number().int().min(0).max(6 * 3600).nullable().optional(),
+      completed: z.boolean(),
+      difficulty: z.enum(['easy', 'ok', 'hard']).nullable().optional(),
+      notes: z.string().max(4000).nullable().optional(),
+    })
+    .parse(await c.req.json());
+  const db = c.get('db');
+  const m = get(db, "SELECT * FROM media WHERE id = ? AND kind = 'follow_along' AND scope = 'library' AND status = 'ready'", b.media_id);
+  if (!m || !canAccessMedia(db, u, m)) throw badRequest('invalid_media');
+  const id = newId();
+  tx(db, () => {
+    insert(db, 'workout_logs', {
+      id, client_id: cid, session_id: null, workout_id: null, media_id: m.id, title: m.title, date: b.date,
+      status: b.completed ? 'completed' : 'partial', notes: b.notes ?? null, started_at: now(), completed_at: now(), updated_at: now(),
+    });
+    insert(db, 'log_entries', {
+      id: newId(), log_id: id, program_item_id: null, exercise_id: null, exercise_name: m.title, log_type: 'practice', sort: 0,
+      data_json: json({ durationSec: b.durationSec ?? null, completed: b.completed, difficulty: b.difficulty ?? null }), notes: null,
+    });
+  });
+  return c.json({ id });
 });

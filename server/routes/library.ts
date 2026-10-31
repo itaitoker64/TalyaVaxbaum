@@ -126,6 +126,9 @@ export function libraryRoutes(storage: LocalStorage) {
     level: z.string().max(100).nullable().optional(),
     instructions: z.string().max(8000).nullable().optional(),
     external_url: z.string().url().startsWith('https://').nullable().optional(),
+    category: z.enum(CATEGORIES).nullable().optional(),
+    cover_media_id: z.string().nullable().optional(),
+    captions_media_id: z.string().nullable().optional(),
     context: z.record(z.string(), z.string()).optional(),
   });
 
@@ -152,6 +155,8 @@ export function libraryRoutes(storage: LocalStorage) {
   r.post('/media', async (c) => {
     const coach = requireCoach(c);
     const b = MediaMeta.parse(await c.req.json());
+    checkOwnMedia(c.get('db'), coach.id, b.cover_media_id);
+    checkOwnMedia(c.get('db'), coach.id, b.captions_media_id);
     const id = newId();
     const { context, ...meta } = b;
     insert(c.get('db'), 'media', {
@@ -168,7 +173,7 @@ export function libraryRoutes(storage: LocalStorage) {
     const b = MediaMeta.parse(await c.req.json());
     if (b.kind === 'demo' || b.kind === 'follow_along') throw badRequest('invalid_kind');
     const id = newId();
-    const { context, ...meta } = b;
+    const { context, cover_media_id: _c, captions_media_id: _k, ...meta } = b;
     insert(c.get('db'), 'media', {
       ...meta, external_url: null, id, uploader_id: u.id, scope: 'private', client_id: cid, coach_id: null,
       status: 'uploading', context_json: json(context), created_at: now(),
@@ -195,7 +200,12 @@ export function libraryRoutes(storage: LocalStorage) {
   r.put('/media/:id', async (c) => {
     const { u, db, m } = loadMedia(c);
     if (m.uploader_id !== u.id) throw notFound();
-    const b = MediaMeta.partial().omit({ kind: true, context: true }).parse(await c.req.json());
+    const raw = await c.req.json();
+    const b = onlySent(MediaMeta.partial().omit({ kind: true, context: true }).parse(raw), raw);
+    if (m.scope === 'library') {
+      checkOwnMedia(db, m.coach_id, b.cover_media_id);
+      checkOwnMedia(db, m.coach_id, b.captions_media_id);
+    } else if (b.cover_media_id || b.captions_media_id) throw badRequest('invalid_media');
     update(db, 'media', m.id, b);
     return c.json({ ok: true });
   });

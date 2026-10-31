@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#DCC8A8"/><stop offset="1" stop-color="#B48A66"/></linearGradient></defs>
+<rect width="1200" height="900" fill="url(#g)"/>
+<circle cx="930" cy="230" r="210" fill="#fff" opacity="0.13"/>
+<path d="M-40 600 C 220 470, 420 760, 700 600 S 1100 470, 1260 560" fill="none" stroke="#fff" stroke-width="7" opacity="0.28"/>
+<path d="M-40 680 C 260 560, 460 840, 760 690 S 1120 560, 1260 650" fill="none" stroke="#fff" stroke-width="4" opacity="0.2"/>
+<line x1="160" y1="712" x2="1040" y2="712" stroke="#fff" stroke-width="6" opacity="0.35" stroke-linecap="round"/><g fill="none" stroke="#FBF6EC" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+<polyline opacity="0.55" points="562,516 668,556 642,690 680,696"/>
+<polyline points="606,362 572,516"/>
+<polyline points="572,516 690,538 668,690 708,696"/>
+<polyline points="604,386 656,462 648,420"/>
+</g>
+<circle cx="612" cy="318" r="36" fill="#FBF6EC"/>
+<circle cx="672" cy="438" r="34" fill="#4E4A42" opacity="0.85"/><path d="M650 410 a22 22 0 0 1 44 0" fill="none" stroke="#4E4A42" stroke-width="10" opacity="0.85"/>
+</svg>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
+import { PracticeLibrary } from './Library.tsx';
 import { useI18n } from '../i18n/index.tsx';
 import { useAuth, useUser } from '../auth.tsx';
 import { useApi } from '../api.ts';
@@ -95,14 +96,18 @@ export function LogHistory({ clientId, linkBase }: { clientId: string; linkBase:
 export function Training() {
   const { t } = useI18n();
   const user = useUser();
-  const [tab, setTab] = useState<'week' | 'history'>('week');
+  const [params, setParams] = useSearchParams();
+  const tab = (params.get('tab') as 'week' | 'library' | 'history') || 'week';
+  const setTab = (v: string) => setParams(v === 'week' ? {} : { tab: v }, { replace: true });
   return (
     <div>
-      <div className="row between" style={{ marginBottom: '0.75rem' }}>
-        <h1 style={{ margin: 0 }}>{t('tab.training')}</h1>
-        <Seg value={tab} onChange={setTab} options={[{ value: 'week', label: t('training.schedule') }, { value: 'history', label: t('training.history') }]} />
+      <h1>{t('tab.training')}</h1>
+      <div style={{ marginBottom: '0.9rem' }}>
+        <Seg value={tab} onChange={setTab} options={[{ value: 'week', label: t('training.schedule') }, { value: 'library', label: t('training.library') }, { value: 'history', label: t('training.history') }]} />
       </div>
-      {tab === 'week' ? <ScheduleWeek clientId={user.id} linkFor={(s) => (s.log_id && s.log_status !== 'draft' ? `/training/log/${s.log_id}` : `/training/session/${s.id}`)} /> : <LogHistory clientId={user.id} linkBase="/training/log/" />}
+      {tab === 'week' && <ScheduleWeek clientId={user.id} linkFor={(s) => (s.log_id && s.log_status !== 'draft' ? `/training/log/${s.log_id}` : `/training/session/${s.id}`)} />}
+      {tab === 'library' && <PracticeLibrary />}
+      {tab === 'history' && <LogHistory clientId={user.id} linkBase="/training/log/" />}
     </div>
   );
 }

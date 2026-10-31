@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { randomBytes } from 'node:crypto';
 import { all, get, insert, run, now, json, parse, type DB } from '../db.ts';
 import type { Env } from '../auth.ts';
-import { requireCoach, requireClientAccess, notFound, forbidden } from '../access.ts';
+import { requireCoach, requireClientAccess, notFound, forbidden, badRequest } from '../access.ts';
+import { CATEGORIES } from '../../shared/types.ts';
 import { todayISO, addDays } from '../../shared/dates.ts';
 
 export const coachRoutes = new Hono<Env>();
@@ -108,7 +109,8 @@ coachRoutes.put('/clients/:cid/settings', async (c) => {
 
 coachRoutes.get('/coach/settings', (c) => {
   const coach = requireCoach(c);
-  return c.json(get(c.get('db'), 'SELECT response_expectation, whatsapp_url, week_start_day FROM coach_settings WHERE coach_id = ?', coach.id) ?? {});
+  const s = get(c.get('db'), 'SELECT response_expectation, whatsapp_url, week_start_day, covers_json FROM coach_settings WHERE coach_id = ?', coach.id);
+  return c.json(s ? { ...s, covers: parse(s.covers_json, {}), covers_json: undefined } : {});
 });
 
 coachRoutes.put('/coach/settings', async (c) => {
@@ -118,15 +120,21 @@ coachRoutes.put('/coach/settings', async (c) => {
       response_expectation: z.string().max(500).nullable(),
       whatsapp_url: z.string().url().startsWith('https://').nullable().or(z.literal('')),
       week_start_day: z.number().int().min(0).max(6),
+      covers: z.record(z.string(), z.string()).optional(),
     })
     .parse(await c.req.json());
   const db = c.get('db');
+  // Category cover photos must be the coach's own ready library images.
+  for (const [cat, mid] of Object.entries(b.covers ?? {})) {
+    if (!CATEGORIES.includes(cat as any)) throw badRequest('invalid_category');
+    if (!get(db, "SELECT 1 FROM media WHERE id = ? AND scope = 'library' AND coach_id = ? AND status = 'ready' AND mime LIKE 'image/%'", mid, coach.id)) throw badRequest('invalid_media');
+  }
   run(
     db,
-    `INSERT INTO coach_settings (coach_id, response_expectation, whatsapp_url, week_start_day, updated_at) VALUES (?,?,?,?,?)
+    `INSERT INTO coach_settings (coach_id, response_expectation, whatsapp_url, week_start_day, covers_json, updated_at) VALUES (?,?,?,?,?,?)
      ON CONFLICT(coach_id) DO UPDATE SET response_expectation = excluded.response_expectation, whatsapp_url = excluded.whatsapp_url,
-     week_start_day = excluded.week_start_day, updated_at = excluded.updated_at`,
-    coach.id, b.response_expectation, b.whatsapp_url || null, b.week_start_day, now(),
+     week_start_day = excluded.week_start_day, covers_json = COALESCE(excluded.covers_json, coach_settings.covers_json), updated_at = excluded.updated_at`,
+    coach.id, b.response_expectation, b.whatsapp_url || null, b.week_start_day, b.covers ? json(b.covers) : null, now(),
   );
   return c.json({ ok: true });
 });
