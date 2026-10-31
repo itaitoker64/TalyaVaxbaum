@@ -93,7 +93,9 @@ try {
   await client.locator('select[aria-label="חלופה מאושרת"]').selectOption({ label: 'חלופה מאושרת: סקוואט לקופסה' });
   await client.locator('.setcheck').first().click();
   await client.locator('.timer').waitFor(); // rest timer started from prescription
+  await client.locator('.timer').getByRole('button', { name: /סגירה/ }).click();
   await client.locator('.setcheck').nth(1).click();
+  await client.locator('.timer').getByRole('button', { name: /סגירה/ }).click();
   await client.getByText('השלמתי את התרגול').click();
   await client.locator('button.ex-head', { hasText: 'ריצה קלה' }).click();
   await client.getByLabel('מרחק (ק״מ)').fill('2.1');

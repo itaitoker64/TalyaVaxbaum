@@ -15,6 +15,7 @@ if (process.env.NODE_ENV === 'production' && existsSync('./dist/web/index.html')
   const index = readFileSync('./dist/web/index.html', 'utf8');
   app.use('/assets/*', serveStatic({ root: './dist/web' }));
   app.use('/favicon.svg', serveStatic({ root: './dist/web' }));
+  app.use('/placeholders/*', serveStatic({ root: './dist/web' }));
   app.use('/manifest.webmanifest', serveStatic({ root: './dist/web' }));
   app.get('*', (c) => c.html(index));
 }
