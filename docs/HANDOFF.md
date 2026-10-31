@@ -40,3 +40,13 @@ Next: collect feedback on the five-screen review before extending the design fur
 ### Visual refinement after feedback
 
 User approved continuing and requested a less AI-looking appearance. Applied a flatter editorial treatment, compact text-first covers when photos are missing, quieter navigation, Heebo interface headings, and a sand default share card without decorative gradient circles. Real uploaded photos still render normally. The earlier five-screen review pause is resolved. Resend remains the selected email provider; recipe sharing, planned-session preview and email work remain outstanding.
+
+## Latest implementation — 2026-11-01
+
+Implemented recipe 9:16 PNG preview/download/native share, using saved dish photos and selectable description, servings and preparation time. No nutrition values are invented; demo recipes are labeled. Coach schedule now opens authorized planned-session previews; completed-session links resolve to coach logs. Both use existing server permission checks.
+
+Added migration 3 for hashed, expiring, single-use password reset tokens; reset revokes all sessions. Added Hebrew/English request/reset pages and Resend server transport. Generic notifications cover new thread messages and check-in replies, with no private content and no sends to demo accounts. Delivery failures do not undo saved messages. Other notification events, durable retries and scheduled reminders remain future work.
+
+Added tested SQLite backup script and `docs/OPERATIONS.md` with Render disk, email, backup and restore procedures. User reports Starter upgrade; disk attachment, external backups, verified sender and real email delivery are NOT verified. RESEND_API_KEY, EMAIL_FROM and APP_URL were absent from the development environment. Set them securely in Render; EMAIL_NOTIFICATIONS=1 enables message emails.
+
+Verification: 19 tests, typecheck, production build, full browser coaching journey and targeted recipe-download/coach-preview/reset UI checks. Backup produced and passed SQLite integrity checking. Visual surfaces retain the approved flatter design. Real photography and a final privacy/consent policy must come from Talya. Previous entries identifying recipe sharing, session preview and password-reset implementation as pending are superseded by this section.

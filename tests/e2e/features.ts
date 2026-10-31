@@ -1,0 +1,32 @@
+import { createRequire } from 'node:module';
+import assert from 'node:assert/strict';
+const { chromium } = createRequire(import.meta.url)('playwright');
+const base = process.env.BASE_URL ?? 'http://localhost:8791';
+const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined });
+try {
+ const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
+ const login = async (email: string) => { await p.goto(base + '/login'); await p.fill('input[type=email]', email); await p.fill('input[type=password]', 'demo-password'); await p.click('button.btn.primary'); await p.waitForURL((u: URL) => !u.pathname.includes('login')); };
+ await login('noa@demo.local');
+ const recipes = await (await p.request.get(base + '/api/recipes')).json();
+ await p.goto(base + '/nutrition/recipe/' + recipes[0].id);
+ await p.getByRole('button', { name: 'שיתוף מתכון', exact: true }).click();
+ const download = p.getByRole('button', { name: /הורד/ });
+ await download.waitFor();
+ await p.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent?.includes('הורד') && !b.disabled));
+ assert.deepEqual(await p.locator('canvas').evaluate((c: HTMLCanvasElement) => [c.width,c.height]), [1080,1920]);
+ const event = p.waitForEvent('download'); await download.click(); const file = await event; assert.equal(file.suggestedFilename(), 'talya-recipe.png');
+ await p.request.post(base + '/api/auth/logout', { headers: { 'x-csrf': '1' } });
+ await login('coach@demo.local');
+ const clients = await (await p.request.get(base + '/api/clients')).json();
+ const noa = clients.find((c: any) => c.email === 'noa@demo.local');
+ await p.goto(base + '/coach/clients/' + noa.id + '/schedule');
+ const preview = p.locator('a[href^="/coach/sessions/"]').first(); await preview.click();
+ await p.waitForURL('**/coach/sessions/**');
+ await p.locator('.exercise').first().waitFor();
+ assert.equal(await p.getByRole('button', { name: /להתחיל/ }).count(), 0);
+ await p.request.post(base + '/api/auth/logout', { headers: { 'x-csrf': '1' } });
+ await p.goto(base + '/forgot-password');
+ await p.fill('input[type=email]', 'noa@demo.local'); await p.click('button.btn.primary');
+ await p.getByRole('alert').waitFor();
+ console.log('Recipe PNG download, coach read-only preview and unavailable-email UI passed');
+} finally { await browser.close(); }

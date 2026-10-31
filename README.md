@@ -68,3 +68,5 @@ docs/          PLAN.md, screenshots/
 
 For browser checks with an existing Chromium installation, set
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium`. Set `SHOTS_DIR` to a temporary directory to avoid overwriting checked-in review captures. Browser tests mutate demo data, so use a fresh isolated `DATA_DIR` for each run.
+
+Operations, Resend setup and backups: [docs/OPERATIONS.md](docs/OPERATIONS.md). Additional browser feature checks: `BASE_URL=http://localhost:8787 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium node --import tsx tests/e2e/features.ts` (seeded isolated server; email unconfigured).

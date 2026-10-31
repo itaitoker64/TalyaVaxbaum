@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, NavLink, Link, Outlet, useLocat
 import { useAuth } from './auth.tsx';
 import { useI18n } from './i18n/index.tsx';
 import { Loading, ErrorBox, Icon } from './components/ui.tsx';
-import { Login, Join } from './client/Auth.tsx';
+import { Login, Join, PasswordReset } from './client/Auth.tsx';
 import { Onboarding } from './client/Onboarding.tsx';
 import { Today } from './client/Today.tsx';
 import { Training } from './client/Training.tsx';
@@ -130,6 +130,8 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/forgot-password" element={<PasswordReset />} />
+        <Route path="/reset-password" element={<PasswordReset reset />} />
         <Route path="/login" element={<Login />} />
         <Route path="/join/:code" element={<Join />} />
         <Route path="/r/:token" element={<PublicRecipe />} />
@@ -154,6 +156,7 @@ export function App() {
             <Route index element={<Attention />} />
             <Route path="clients" element={<Clients />} />
             <Route path="clients/:cid/*" element={<ClientProfile />} />
+            <Route path="sessions/:sid" element={<SessionScreen />} />
             <Route path="logs/:lid" element={<LogView />} />
             <Route path="goals/:gid" element={<GoalDetail />} />
             <Route path="programs" element={<Programs />} />

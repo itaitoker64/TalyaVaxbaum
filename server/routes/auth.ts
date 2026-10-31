@@ -1,3 +1,5 @@
+import { randomBytes, createHash } from 'node:crypto';
+import { emailConfigured, sendEmail } from '../email.ts';
 import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { z } from 'zod';
@@ -111,4 +113,40 @@ authRoutes.post('/auth/password', async (c) => {
   if (!(await verifyPassword(b.current, row.password_hash))) throw badRequest('invalid_credentials');
   run(db, 'UPDATE users SET password_hash = ? WHERE id = ?', await hashPassword(b.next), u.id);
   return c.json({ ok: true });
+});
+
+const resetHash = (token: string) => createHash('sha256').update(token).digest('hex');
+authRoutes.post('/auth/forgot-password', async c => {
+  const { email } = z.object({ email: z.string().email().max(254) }).parse(await c.req.json());
+  if (!emailConfigured()) return c.json({ error: 'email_unavailable' }, 503);
+  const key = 'reset:' + email.toLowerCase();
+  if (!loginAllowed(key)) return c.json({ error: 'too_many_attempts' }, 429);
+  recordLoginFailure(key);
+  const db = c.get('db');
+  run(db, 'DELETE FROM password_resets WHERE expires_at < ?', now());
+  const user = get(db, 'SELECT id, email, locale FROM users WHERE email = ? AND disabled = 0', email);
+  if (user) {
+    const token = randomBytes(32).toString('hex');
+    const hash = resetHash(token);
+    insert(db, 'password_resets', { token_hash: hash, user_id: user.id, expires_at: new Date(Date.now() + 30 * 60000).toISOString() });
+    const link = new URL('/reset-password', process.env.APP_URL!); link.hash = token;
+    try { await sendEmail(user.email, user.locale === 'he' ? 'איפוס סיסמה — Movement by Talya' : 'Reset your password — Movement by Talya', (user.locale === 'he' ? 'קישור לאיפוס סיסמה, בתוקף ל־30 דקות. אם לא ביקשת איפוס, אפשר להתעלם.\n' : 'Reset link, valid for 30 minutes. Ignore this if you did not request it.\n') + link.href); }
+    catch { run(db, 'DELETE FROM password_resets WHERE token_hash = ?', hash); console.error('Password reset email delivery failed'); }
+  }
+  return c.json({ ok: true });
+});
+authRoutes.post('/auth/reset-password', async c => {
+  const b = z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), password: z.string().min(10).max(200) }).parse(await c.req.json());
+  const db = c.get('db'), hash = resetHash(b.token);
+  const passwordHash = await hashPassword(b.password);
+  const ok = tx(db, () => {
+    const row = get(db, 'SELECT p.user_id FROM password_resets p JOIN users u ON u.id = p.user_id WHERE p.token_hash = ? AND p.expires_at > ? AND u.disabled = 0', hash, now());
+    if (!row) return false;
+    run(db, 'UPDATE users SET password_hash = ? WHERE id = ?', passwordHash, row.user_id);
+    run(db, 'DELETE FROM password_resets WHERE user_id = ?', row.user_id);
+    run(db, 'DELETE FROM sessions WHERE user_id = ?', row.user_id);
+    return true;
+  });
+  if (!ok) return c.json({ error: 'invalid_reset' }, 400);
+  clearSessionCookie(c); return c.json({ ok: true });
 });

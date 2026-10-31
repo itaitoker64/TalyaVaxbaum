@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useParams, Navigate } from 'react-router';
+import { useParams, Navigate, Link } from 'react-router';
 import { useI18n } from '../i18n/index.tsx';
 import { useAuth } from '../auth.tsx';
 import { POST, useApi, ApiError } from '../api.ts';
@@ -51,6 +51,7 @@ export function Login() {
         <Field label={t('auth.password')}><Input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
         {err && <div className="alert error">{err}</div>}
         <button className="btn primary big" disabled={busy}>{t('auth.login')}</button>
+        <Link to="/forgot-password" className="btn ghost">{t('auth.forgot')}</Link>
         <p className="tiny muted center">{t('auth.noAccount')}</p>
       </form>
     </Shell>
@@ -96,4 +97,21 @@ export function Join() {
       </form>
     </Shell>
   );
+}
+
+export function PasswordReset({ reset = false }: { reset?: boolean }) {
+  const { t } = useI18n();
+  const [value, setValue] = useState('');
+  const [token] = useState(() => { const token = location.hash.slice(1); if (reset) history.replaceState(null, '', location.pathname); return token; });
+  const [done, setDone] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
+  return <Shell><form className="card stack" onSubmit={async e => {
+    e.preventDefault(); setBusy(true); setError('');
+    try { await POST(reset ? '/auth/reset-password' : '/auth/forgot-password', reset ? { token, password: value } : { email: value }); setDone(true); }
+    catch (e) { const code = (e as ApiError).code; setError(code === 'email_unavailable' ? t('auth.emailUnavailable') : reset ? t('auth.resetError') : errorText(t, e)); }
+    finally { setBusy(false); }
+  }}><h2>{t('auth.reset')}</h2>
+    {done ? <p role="status">{t(reset ? 'auth.resetDone' : 'auth.resetSent')}</p> : <>
+      <Field label={t(reset ? 'auth.password' : 'auth.email')} hint={reset ? t('auth.resetHint') : undefined}><Input required type={reset ? 'password' : 'email'} autoComplete={reset ? 'new-password' : 'email'} minLength={reset ? 10 : undefined} value={value} onChange={e => setValue(e.target.value)} /></Field>
+      {error && <p role="alert">{error}</p>}<button className="btn primary" disabled={busy}>{t(reset ? 'auth.reset' : 'common.send')}</button>
+    </>}<Link className="btn ghost" to="/login">{t('auth.login')}</Link></form></Shell>;
 }

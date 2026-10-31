@@ -1,3 +1,4 @@
+import { notifyUser } from '../email.ts';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { all, get, insert, run, update, now, newId, json, parse, tx } from '../db.ts';
@@ -57,6 +58,7 @@ engagementRoutes.post('/checkins/:id/review', async (c) => {
     update(db, 'checkins', ci.id, { coach_reviewed_at: now() });
     if (b.feedback?.trim()) insert(db, 'messages', { id: newId(), client_id: ci.client_id, sender_id: coach.id, body: b.feedback.trim(), ref_type: 'checkin', ref_id: ci.id, created_at: now() });
   });
+  if (b.feedback?.trim()) await notifyUser(db, ci.client_id);
   return c.json({ ok: true });
 });
 
@@ -73,6 +75,7 @@ engagementRoutes.post('/clients/:cid/messages', async (c) => {
   const b = z.object({ body: z.string().trim().min(1).max(8000) }).parse(await c.req.json());
   const id = newId();
   insert(c.get('db'), 'messages', { id, client_id: cid, sender_id: u.id, body: b.body, created_at: now() });
+  for (const recipient of u.role === 'coach' ? [cid] : coachIdsOf(c.get('db'), cid)) await notifyUser(c.get('db'), recipient);
   return c.json({ id });
 });
 

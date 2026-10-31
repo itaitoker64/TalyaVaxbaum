@@ -37,7 +37,7 @@ export function ShareCard() {
   return <Async q={q}>{(d) => <Editor d={d} />}</Async>;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => res(img);
@@ -46,13 +46,13 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+export function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
   const s = Math.max(SIZE.w / img.naturalWidth, SIZE.h / img.naturalHeight);
   const w = img.naturalWidth * s, h = img.naturalHeight * s;
   ctx.drawImage(img, (SIZE.w - w) / 2, (SIZE.h - h) / 2, w, h);
 }
 
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
+export function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let cur = '';

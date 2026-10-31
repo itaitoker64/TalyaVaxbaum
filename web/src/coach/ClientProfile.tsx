@@ -36,7 +36,7 @@ export function ClientProfile() {
           <Routes>
             <Route index element={<Overview c={c} reload={q.reload} />} />
             <Route path="program" element={<ClientProgram clientId={c.id} />} />
-            <Route path="schedule" element={<div className="grid2"><div><ScheduleWeek clientId={c.id} linkFor={(s) => (s.log_id ? `/coach/logs/${s.log_id}` : '#')} /></div><div><h3>{t('training.history')}</h3><LogHistory clientId={c.id} linkBase="/coach/logs/" /></div></div>} />
+            <Route path="schedule" element={<div className="grid2"><div><ScheduleWeek clientId={c.id} linkFor={(s) => (s.log_id ? `/coach/logs/${s.log_id}` : `/coach/sessions/${s.id}`)} /></div><div><h3>{t('training.history')}</h3><LogHistory clientId={c.id} linkBase="/coach/logs/" /></div></div>} />
             <Route path="goals" element={<ClientGoals clientId={c.id} />} />
             <Route path="checkins" element={<CheckinList clientId={c.id} />} />
             <Route path="videos" element={<ClientVideos clientId={c.id} />} />

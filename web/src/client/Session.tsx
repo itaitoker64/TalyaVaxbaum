@@ -57,7 +57,7 @@ function SessionInner({ d, reload }: { d: any; reload: () => void }) {
         <Header d={d} />
         <div className="card row between">
           <StatusBadge status={d.log.status} />
-          <Link className="btn primary" to={`/training/log/${d.log.id}`}>{t('training.view')}</Link>
+          <Link className="btn primary" to={user.role === 'coach' ? `/coach/logs/${d.log.id}` : `/training/log/${d.log.id}`}>{t('training.view')}</Link>
         </div>
       </div>
     );

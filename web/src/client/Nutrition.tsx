@@ -4,6 +4,7 @@ import { useI18n } from '../i18n/index.tsx';
 import { useAuth, useUser } from '../auth.tsx';
 import { useApi, POST, PUT, DEL } from '../api.ts';
 import { Async, DateNav, Modal, Seg, Field, Input, NumInput, Select, ErrorBox, Empty, DemoBadge, N } from '../components/ui.tsx';
+import { RecipeShare } from './RecipeShare.tsx';
 import { Cover } from '../components/imagery.tsx';
 import { MediaPlayer } from '../components/media.tsx';
 import { MacroStat } from './Today.tsx';
@@ -316,6 +317,7 @@ function RecipeDetail({ r, reload }: { r: any; reload: () => void }) {
   const [err, setErr] = useState<unknown>(null);
   const n = useMemo(() => recipeNutrition(r.ingredients, r.servings, swaps), [r, swaps]);
   const isClient = user.role === 'client';
+  const [sharing, setSharing] = useState(false);
   return (
     <div>
       <Cover category="recipe" mediaId={r.photo_media_id} className="recipe-hero" />
@@ -323,6 +325,8 @@ function RecipeDetail({ r, reload }: { r: any; reload: () => void }) {
         <h1 style={{ margin: 0 }}>{r.title} <DemoBadge show={r.is_demo} /></h1>
         <button className="btn ghost" onClick={async () => { await POST('/favorites', { kind: 'recipe', ref_id: r.id, on: !r.favorite }); reload(); }} aria-label={t('common.favorite')}>{r.favorite ? '★' : '☆'}</button>
       </div>
+      <button className="btn" onClick={() => setSharing(true)}>{t('recipe.share')}</button>
+      {sharing && <Modal title={t('recipe.share')} onClose={() => setSharing(false)}><RecipeShare recipe={r} /></Modal>}
       {r.description && <p>{r.description}</p>}
       <div className="row small muted">{r.prep_minutes ? <span>{t('nutrition.prep', { n: r.prep_minutes })}</span> : null}<span><N>{r.servings}</N> {t('nutrition.servings')}</span></div>
       {r.video_url && <div style={{ marginTop: 8 }}><MediaPlayer media={{ id: '', title: r.title, external_url: r.video_url }} /></div>}

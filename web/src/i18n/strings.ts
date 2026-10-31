@@ -1,6 +1,16 @@
 // UI strings: [Hebrew, English]. Hebrew is the default. Wording avoids gendered verb forms
 // where possible (infinitives and nouns), and stays supportive around missed sessions.
 export const STRINGS = {
+  'auth.forgot': ['שכחת סיסמה?', 'Forgot password?'],
+  'auth.reset': ['איפוס סיסמה', 'Reset password'],
+  'auth.resetSent': ['אם החשבון קיים, יישלח אליו קישור לאיפוס הסיסמה.', 'If the account exists, a reset link will be sent.'],
+  'auth.resetDone': ['הסיסמה עודכנה. אפשר להתחבר מחדש.', 'Password updated. Please sign in again.'],
+  'auth.resetError': ['הקישור אינו תקין או שפג תוקפו. בקשו קישור חדש.', 'The link is invalid or expired. Request a new one.'],
+  'auth.emailUnavailable': ['שירות המייל אינו זמין כרגע. נסו שוב מאוחר יותר.', 'Email is currently unavailable. Please try again later.'],
+  'auth.resetHint': ['לפחות 10 תווים', 'At least 10 characters'],
+  'recipe.share': ['שיתוף מתכון', 'Share recipe'],
+  'recipe.shareInfo': ['מידע שיופיע בכרטיס', 'Information on the card'],
+  'share.failed': ['לא ניתן ליצור את התמונה. נסו שוב.', 'Could not create the image. Please try again.'],
   'img.awaitingPhoto': ['צילום יתווסף בהמשך', 'Photo to come'],
   'app.name': ['Movement by Talya', 'Movement by Talya'],
   'app.tagline': ['כוח, תנועה וגמישות — בקצב שלך', 'Strength, mobility and flexibility — at your pace'],
