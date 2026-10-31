@@ -4,6 +4,7 @@ import { useI18n } from '../i18n/index.tsx';
 import { useAuth, useUser } from '../auth.tsx';
 import { useApi, POST, PUT, DEL } from '../api.ts';
 import { Async, DateNav, Modal, Seg, Field, Input, NumInput, Select, ErrorBox, Empty, DemoBadge, N } from '../components/ui.tsx';
+import { Cover } from '../components/imagery.tsx';
 import { MediaPlayer } from '../components/media.tsx';
 import { MacroStat } from './Today.tsx';
 import { mediaUrl } from '../api.ts';
@@ -283,13 +284,13 @@ function RecipeList() {
       {(list) => list.length === 0 ? <Empty>{t('common.none')}</Empty> : (
         <div className="grid2">
           {list.map((r) => (
-            <Link key={r.id} to={`/nutrition/recipe/${r.id}`} className="card" style={{ textDecoration: 'none', color: 'inherit' }}>
-              {r.photo_media_id && <img className="recipe-photo" src={mediaUrl(r.photo_media_id)} alt="" style={{ maxHeight: 160 }} />}
+            <Link key={r.id} to={`/nutrition/recipe/${r.id}`} className="wcard">
+              <Cover category="recipe" mediaId={r.photo_media_id} /><div className="wbody">
               <div className="row between"><strong>{r.title}</strong>{r.favorite && <span>★</span>}</div>
               <div className="small muted">
                 {r.prep_minutes ? t('nutrition.prep', { n: r.prep_minutes }) + ' · ' : ''}
                 <span className="num">{fmtNum(r.nutrition.perServing.kcal, 0)} kcal</span> {t('nutrition.perServing')} <DemoBadge show={r.is_demo} />
-              </div>
+              </div></div>
             </Link>
           ))}
         </div>
@@ -317,7 +318,7 @@ function RecipeDetail({ r, reload }: { r: any; reload: () => void }) {
   const isClient = user.role === 'client';
   return (
     <div>
-      {r.photo_media_id && <img className="recipe-photo" src={mediaUrl(r.photo_media_id)} alt={r.title} />}
+      <Cover category="recipe" mediaId={r.photo_media_id} className="recipe-hero" />
       <div className="row between" style={{ margin: '0.75rem 0' }}>
         <h1 style={{ margin: 0 }}>{r.title} <DemoBadge show={r.is_demo} /></h1>
         <button className="btn ghost" onClick={async () => { await POST('/favorites', { kind: 'recipe', ref_id: r.id, on: !r.favorite }); reload(); }} aria-label={t('common.favorite')}>{r.favorite ? '★' : '☆'}</button>

@@ -22,13 +22,13 @@ export function Attention() {
   };
   return (
     <div>
-      <h1>{t('coach.attention')}</h1>
+      <header className="page-intro"><h1>{t('coach.attention')}</h1></header>
       <Async q={q}>
         {(items) => items.length === 0 ? <Empty>{t('coach.allClear')}</Empty> : (
-          <div className="card">
+          <div className="attention-queue">
             <ul className="list">
               {items.map((i) => (
-                <li key={i.type + i.id}>
+                <li className="card" key={i.type + i.id}>
                   <Link className="listlink" to={link(i)}>
                     <div className="grow">
                       <div><strong>{i.clientName}</strong> · {t(('att.' + i.type) as StringKey, { n: i.detail.count ?? '' })}</div>

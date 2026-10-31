@@ -16,3 +16,11 @@ Screens (demo data, phone viewport): `docs/screenshots/design/`
 - **Charts:** measured points (labeled values) are visually distinct from the dashed target line or shaded range and the dotted baseline. Dates are shown, method changes and long gaps are marked, and there are no projections. Hebrew labels are rendered as HTML so mixed text is never reordered.
 - **Brand moments:** subtle flowing lines appear only on the hero, the footer card and share cards.
 - **Accessibility:** RTL throughout, bidi-isolated numbers and units, 44px+ touch targets, status shown with text or icon as well as color, labeled icon-only buttons, WebVTT captions, `prefers-reduced-motion`, nothing that relies on hover.
+
+## Refinement after review — 2026-11-01
+
+The user asked for a less generic, less AI-looking direction. Interface headings now use Heebo; Frank Ruhl Libre is reserved for the wordmark, category covers and sharing. Surfaces use smaller corner radii, fine separators and no default elevation. Bright green remains for completion and selection, while the main Today action uses dark sage.
+
+When no actual photograph exists, Cover now shows a plain typographic category surface labeled “צילום יתווסף בהמשך”. Real practice photos and coach category uploads still take priority. We no longer enlarge abstract figure illustrations into hero photography. Today collapses the missing-photo hero into a compact text-first card. The library retains space for actual photography without raised nested cards. The default share background is flat sand with a fine divider; optional user photos remain supported.
+
+This supersedes the earlier placeholder-artwork and universal serif-heading directions. No stock or generated photography was introduced.

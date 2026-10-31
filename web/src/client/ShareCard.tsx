@@ -52,22 +52,6 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
   ctx.drawImage(img, (SIZE.w - w) / 2, (SIZE.h - h) / 2, w, h);
 }
 
-function flowLines(ctx: CanvasRenderingContext2D, color: string, alpha: number, y0: number) {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.globalAlpha = alpha;
-  ctx.lineCap = 'round';
-  for (const [dy, lw] of [[0, 6], [70, 3.5]] as const) {
-    ctx.lineWidth = lw;
-    ctx.beginPath();
-    ctx.moveTo(-40, y0 + dy);
-    ctx.bezierCurveTo(260, y0 - 160 + dy, 520, y0 + 200 + dy, 780, y0 + 20 + dy);
-    ctx.bezierCurveTo(920, y0 - 70 + dy, 1020, y0 - 40 + dy, 1120, y0 + 10 + dy);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
   const words = text.split(/\s+/);
   const lines: string[] = [];
@@ -87,7 +71,7 @@ function Editor({ d }: { d: any }) {
   const user = useUser();
   const canvas = useRef<HTMLCanvasElement>(null);
   const stats = useMemo(() => shareStats(d), [d]);
-  const [bg, setBg] = useState<Bg>('sage');
+  const [bg, setBg] = useState<Bg>('sand');
   const [photo, setPhoto] = useState<HTMLImageElement | null>(null);
   const [note, setNote] = useState('');
   // Personal details (name, note, own photo) are off until the user turns them on.
@@ -129,14 +113,11 @@ function Editor({ d }: { d: any }) {
       } else if (bg === 'sea') {
         drawCover(ctx, await loadImage('/placeholders/sea.svg'));
       } else {
-        const g = ctx.createLinearGradient(0, 0, 300, SIZE.h);
-        if (bg === 'sand') { g.addColorStop(0, '#f8efe2'); g.addColorStop(1, '#d9bf98'); }
-        else { g.addColorStop(0, '#a3b596'); g.addColorStop(1, '#43563b'); }
-        ctx.fillStyle = g;
+        ctx.fillStyle = bg === 'sand' ? '#f3ece1' : '#4d6143';
         ctx.fillRect(0, 0, SIZE.w, SIZE.h);
-        ctx.fillStyle = dark ? 'rgba(255,255,255,0.10)' : 'rgba(126,148,113,0.16)';
-        ctx.beginPath(); ctx.arc(820, 420, 330, 0, Math.PI * 2); ctx.fill();
-        flowLines(ctx, dark ? '#ffffff' : '#7e9471', dark ? 0.28 : 0.45, 760);
+        ctx.strokeStyle = bg === 'sand' ? '#dccdb6' : '#7e9471';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(90, 250); ctx.lineTo(SIZE.w - 90, 250); ctx.stroke();
       }
       if (dark) {
         // Contrast scrim behind text over imagery.
@@ -168,6 +149,11 @@ function Editor({ d }: { d: any }) {
       ctx.font = '700 36px "Frank Ruhl Libre"';
       ctx.fillText('Movement by Talya', X + sign * 78, 145);
 
+      if (user.is_demo || d.log.is_demo || (bg === 'sea')) {
+        ctx.font = '500 30px Heebo';
+        ctx.fillText([user.is_demo || d.log.is_demo ? t('common.demo') : '', bg === 'sea' ? t('img.placeholder') : ''].filter(Boolean).join(' · '), X, 205);
+      }
+
       // Content block, laid out bottom-up so the achievement sits in the lower third.
       ctx.font = '700 104px "Frank Ruhl Libre"';
       const titleLines = show.workoutName ? wrap(ctx, d.log.title, SIZE.w - 180, 3) : [];
@@ -177,7 +163,7 @@ function Editor({ d }: { d: any }) {
 
       ctx.fillStyle = accent;
       ctx.font = '700 42px Heebo';
-      ctx.fillText(t('share.done'), X, y + 42);
+      ctx.fillText(d.log.status === 'partial' ? t('status.partial') : t('share.done'), X, y + 42);
       y += 60;
       ctx.fillStyle = ink;
       ctx.font = '700 104px "Frank Ruhl Libre"';
@@ -253,8 +239,8 @@ function Editor({ d }: { d: any }) {
     ['sets', t('share.sets'), stats.sets != null], ['volume', t('share.volume'), stats.volume != null], ['effort', t('share.effort'), stats.effort != null],
   ];
   const bgs: { k: Bg; label: string; style: React.CSSProperties }[] = [
-    { k: 'sage', label: t('share.bg.sage'), style: { background: 'linear-gradient(160deg,#a3b596,#43563b)' } },
-    { k: 'sand', label: t('share.bg.sand'), style: { background: 'linear-gradient(160deg,#f8efe2,#d9bf98)' } },
+    { k: 'sage', label: t('share.bg.sage'), style: { background: '#4d6143' } },
+    { k: 'sand', label: t('share.bg.sand'), style: { background: '#f3ece1' } },
     { k: 'sea', label: t('share.bg.sea'), style: { backgroundImage: 'url(/placeholders/sea.svg)' } },
   ];
 

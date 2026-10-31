@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useI18n } from '../i18n/index.tsx';
 import { useApi, POST, PUT } from '../api.ts';
 import { Async, Field, Input, TextArea, Select, NumInput, ErrorBox, Empty, DemoBadge, useDateLabel, N, Parts } from '../components/ui.tsx';
+import { Cover } from '../components/imagery.tsx';
 import { prescriptionParts } from '../shared/format.ts';
 import { CATEGORIES } from '../../../shared/types.ts';
 import { todayISO } from '../../../shared/dates.ts';
@@ -142,7 +143,8 @@ function Editor({ p, exercises, reload }: { p: any; exercises: any[]; reload: ()
       </div>
 
       {weekIdx.map(([w, wi]) => (
-        <div key={wi} className="card">
+        <section key={wi} className="card program-workout">
+          <Cover category={w.category} className="workout-banner" />
           <div className="grid3">
             <Field label={t('prog.workoutTitle')}><Input value={w.title} disabled={readOnly} onChange={(e) => setW(wi, { title: e.target.value })} /></Field>
             <Field label={t('prog.day')}><Select value={w.day_of_week} disabled={readOnly} onChange={(e) => setW(wi, { day_of_week: Number(e.target.value) })}>{[0, 1, 2, 3, 4, 5, 6].map((d) => <option key={d} value={d}>{t(('day.' + d) as StringKey)}</option>)}</Select></Field>
@@ -181,7 +183,7 @@ function Editor({ p, exercises, reload }: { p: any; exercises: any[]; reload: ()
               <button className="btn small danger" onClick={() => change((all) => all.filter((_, i) => i !== wi))}>{t('common.delete')}</button>
             </div>
           )}
-        </div>
+        </section>
       ))}
       {!readOnly && <button className="btn" onClick={() => change((all) => [...all, { week_index: week, day_of_week: 0, title: t('prog.workoutTitle'), category: 'strength', notes: null, est_minutes: 45, items: [] }])}>{t('prog.addWorkout')}</button>}
 
