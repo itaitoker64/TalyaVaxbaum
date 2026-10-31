@@ -4,6 +4,7 @@ import { useI18n } from '../i18n/index.tsx';
 import { useApi, POST, PUT } from '../api.ts';
 import { Async, Field, Input, TextArea, Select, NumInput, Seg, ErrorBox, Empty, DemoBadge, useDateLabel, StatusBadge } from '../components/ui.tsx';
 import { MediaPlayer } from '../components/media.tsx';
+import { mediaUrl } from '../api.ts';
 import { ScheduleWeek, LogHistory } from '../client/Training.tsx';
 import { GoalList, AdherenceCard, ExerciseHistory } from '../client/Progress.tsx';
 import { CheckinList } from '../client/Checkin.tsx';
@@ -61,6 +62,7 @@ function Overview({ c, reload }: { c: any; reload: () => void }) {
   return (
     <div className="grid2">
       <div>
+        {c.track === 'B' && <ExistingProgramView ep={c.existingProgram} />}
         <div className="card">
           <h3>{t('client.onboarding')}</h3>
           {!o ? <p className="muted">{t('coach.onboardingPending')}</p> : (
@@ -205,6 +207,37 @@ function ClientNutrition({ c, reload }: { c: any; reload: () => void }) {
         <button className="btn primary" onClick={async () => { await PUT(`/clients/${c.id}/settings`, { nutrition: cfg }); setSaved(true); reload(); }}>{saved ? t('common.saved') : t('common.save')}</button>
       </div>
       <div>{c.nutrition.mode !== 'off' ? <Diary clientId={c.id} config={c.nutrition} readOnly /> : <Empty>{t('nmode.off')}</Empty>}</div>
+    </div>
+  );
+}
+
+/** Track B: what the client follows today, so the coach can plan mobility around it. */
+function ExistingProgramView({ ep }: { ep: any }) {
+  const { t, fmtDate } = useI18n();
+  return (
+    <div className="card sage">
+      <div className="card-title"><h3>{t('trackB.coachTitle')}</h3>{ep?.updatedAt && <span className="tiny muted">{t('trackB.updated', { date: fmtDate(ep.updatedAt) })}</span>}</div>
+      {!ep ? <p className="muted small">{t('trackB.none')}</p> : (
+        <>
+          {ep.text && <p className="pre small">{ep.text}</p>}
+          <div className="row">
+            {(ep.mediaIds ?? []).map((id: string, i: number) => (
+              <a key={id} className="btn small" href={mediaUrl(id)} target="_blank" rel="noreferrer noopener">📎 {t('trackB.openFile')} {i + 1}</a>
+            ))}
+          </div>
+          {ep.history?.length > 0 && (
+            <details className="small" style={{ marginTop: 8 }}>
+              <summary>{t('trackB.previous', { n: ep.history.length })}</summary>
+              {[...ep.history].reverse().map((h: any, i: number) => (
+                <div key={i} className="card soft" style={{ marginTop: 6 }}>
+                  <div className="tiny muted">{h.updatedAt ? fmtDate(h.updatedAt) : ''}</div>
+                  <p className="pre" style={{ margin: 0 }}>{h.text}</p>
+                </div>
+              ))}
+            </details>
+          )}
+        </>
+      )}
     </div>
   );
 }

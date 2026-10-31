@@ -48,6 +48,7 @@ authRoutes.get('/auth/me', (c) => {
     const coach = coachId ? get(db, 'SELECT name FROM users WHERE id = ?', coachId) : null;
     extra = {
       onboardingDone: !!p?.onboarding_completed_at,
+      track: get(db, "SELECT track FROM coach_clients WHERE client_id = ? AND status != 'ended'", u.id)?.track ?? 'A',
       nutrition: p ? JSON.parse(p.nutrition_json) : { mode: 'diary' },
       coachName: coach?.name ?? null,
     };

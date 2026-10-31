@@ -49,6 +49,7 @@ coachRoutes.get('/clients/:cid', (c) => {
     ...u,
     is_demo: !!u.is_demo,
     track: cc?.track ?? 'A',
+    existingProgram: parse(p?.existing_program_json, null),
     status: cc?.status ?? 'active',
     onboarding: parse(p?.onboarding_json, null),
     onboardingCompletedAt: p?.onboarding_completed_at ?? null,
@@ -200,4 +201,30 @@ export function attentionFor(db: DB, coachId: string, today = todayISO()) {
 coachRoutes.get('/coach/attention', (c) => {
   const coach = requireCoach(c);
   return c.json(attentionFor(c.get('db'), coach.id, c.req.query('today') ?? todayISO()));
+});
+
+/**
+ * Track B: the client shares the strength program they already follow (text and/or files).
+ * The coach reviews it and builds the mobility/flexibility plan around it. Previous versions are
+ * kept so the coach can see what changed.
+ */
+const ExistingProgram = z.object({
+  text: z.string().max(20000).default(''),
+  mediaIds: z.array(z.string()).max(10).default([]),
+});
+
+coachRoutes.put('/clients/:cid/existing-program', async (c) => {
+  const cid = c.req.param('cid');
+  const u = requireClientAccess(c, cid);
+  if (u.role !== 'client') throw forbidden();
+  const b = ExistingProgram.parse(await c.req.json());
+  const db = c.get('db');
+  for (const id of b.mediaIds) {
+    if (!get(db, "SELECT 1 FROM media WHERE id = ? AND scope = 'private' AND client_id = ? AND status = 'ready'", id, cid)) throw badRequest('invalid_media');
+  }
+  const prev = parse<any>(get(db, 'SELECT existing_program_json FROM client_profiles WHERE client_id = ?', cid)?.existing_program_json, null);
+  const history = prev ? [...(prev.history ?? []), { text: prev.text, mediaIds: prev.mediaIds, updatedAt: prev.updatedAt }].slice(-10) : [];
+  const value = { text: b.text, mediaIds: b.mediaIds, updatedAt: now(), history };
+  run(db, 'UPDATE client_profiles SET existing_program_json = ?, updated_at = ? WHERE client_id = ?', json(value), now(), cid);
+  return c.json({ ok: true });
 });

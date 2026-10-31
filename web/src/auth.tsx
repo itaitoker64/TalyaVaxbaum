@@ -10,6 +10,7 @@ export interface Me {
   responseExpectation: string | null;
   whatsappUrl: string | null;
   onboardingDone?: boolean;
+  track?: 'A' | 'B';
   nutrition?: NutritionConfig;
 }
 
