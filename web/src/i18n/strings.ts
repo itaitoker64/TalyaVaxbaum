@@ -1,6 +1,7 @@
 // UI strings: [Hebrew, English]. Hebrew is the default. Wording avoids gendered verb forms
 // where possible (infinitives and nouns), and stays supportive around missed sessions.
 export const STRINGS = {
+  'img.awaitingPhoto': ['צילום יתווסף בהמשך', 'Photo to come'],
   'app.name': ['Movement by Talya', 'Movement by Talya'],
   'app.tagline': ['כוח, תנועה וגמישות — בקצב שלך', 'Strength, mobility and flexibility — at your pace'],
   'common.save': ['שמירה', 'Save'],

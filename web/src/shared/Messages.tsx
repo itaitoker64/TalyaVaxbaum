@@ -33,16 +33,16 @@ export function Messages({ clientId: cidProp }: { clientId?: string }) {
   };
   return (
     <div>
-      {!cidProp && <h1>{t('messages.title', { name: me?.coachName ?? '' })}</h1>}
+      {!cidProp && <header className="page-intro"><h1>{t('messages.title', { name: me?.coachName ?? '' })}</h1></header>}
       {user.role === 'client' && me?.responseExpectation && <div className="card soft small">{t('today.coachReply', { text: me.responseExpectation })}</div>}
       <Async q={q}>
         {(msgs) => msgs.length === 0 ? <Empty>{t('messages.empty')}</Empty> : (
-          <div className="chatlist" style={{ marginBottom: '1rem' }}>
+          <div className="chatlist card" role="log" aria-label={t('client.messages')} style={{ marginBottom: '1rem' }}>
             {msgs.map((m) => (
               <div key={m.id} className={'bubble' + (m.sender_id === user.id ? ' mine' : '')}>
                 {m.ref_type && <div className="tiny muted">{t('messages.about', { what: t(('ref.' + m.ref_type) as StringKey) })}</div>}
                 {m.body}
-                <div className="tiny muted">{m.sender_name} · {dateLabel(m.created_at.slice(0, 10))} {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                <div className="tiny muted">{m.sender_name} · {dateLabel(m.created_at.slice(0, 10))} <bdi>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</bdi></div>
               </div>
             ))}
             <div ref={end} />
@@ -50,7 +50,7 @@ export function Messages({ clientId: cidProp }: { clientId?: string }) {
         )}
       </Async>
       <div className="card stack">
-        <TextArea value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('messages.placeholder')} />
+        <TextArea aria-label={t('messages.placeholder')} value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('messages.placeholder')} />
         {!!err && <ErrorBox error={err} />}
         <button className="btn primary" onClick={send} disabled={!body.trim()}>{t('common.send')}</button>
       </div>

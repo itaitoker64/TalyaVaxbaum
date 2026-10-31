@@ -61,7 +61,7 @@ export function Today() {
       {(d) => {
         const doneIds = new Set(d.practiceLogs.map((l: any) => l.media_id));
         return (
-          <div>
+          <div className="today-page">
             <div style={{ marginBottom: '0.9rem' }}>
               <div className="eyebrow">{fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long' })}</div>
               <h1 style={{ margin: 0 }}>{t('today.hello', { name: user.name.split(' ')[0] })}</h1>

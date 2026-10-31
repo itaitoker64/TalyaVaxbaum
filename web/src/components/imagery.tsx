@@ -1,12 +1,13 @@
 import { useAuth } from '../auth.tsx';
 import { useI18n } from '../i18n/index.tsx';
+import { STRINGS, type StringKey } from '../i18n/strings.ts';
 import { mediaUrl } from '../api.ts';
 
 const PLACEHOLDER_KEYS = ['strength', 'functional', 'pilates', 'yoga', 'running', 'mobility', 'flexibility', 'sea', 'recipe'] as const;
 export type CoverKind = (typeof PLACEHOLDER_KEYS)[number];
 
 /** Resolves the image for a workout/practice: its own photo, else the coach's category photo,
- *  else built-in placeholder artwork (flagged so the UI can label it). */
+ *  else the bundled placeholder source for canvas consumers. Cover renders a typographic fallback. */
 export function useCoverSrc(category?: string | null, mediaId?: string | null): { src: string; placeholder: boolean } {
   const { me } = useAuth();
   if (mediaId) return { src: mediaUrl(mediaId), placeholder: false };
@@ -22,10 +23,12 @@ export function Cover({ category, mediaId, scrim, className, children, showTag =
 }) {
   const { t } = useI18n();
   const { src, placeholder } = useCoverSrc(category, mediaId);
+  const categoryKey = (category === 'recipe' ? 'nutrition.recipes' : 'cat.' + category) as StringKey;
+  const categoryLabel = categoryKey in STRINGS ? t(categoryKey) : '';
   return (
-    <div className={'cover' + (scrim ? ' scrim' : '') + (className ? ' ' + className : '')}>
-      <img src={src} alt="" loading="lazy" decoding="async" />
-      {placeholder && showTag && <span className="ph-tag">{t('img.placeholder')}</span>}
+    <div className={'cover' + (placeholder ? ' cover-placeholder' : '') + (scrim ? ' scrim' : '') + (className ? ' ' + className : '')}>
+      {placeholder ? <span className="cover-category" aria-hidden="true">{categoryLabel}</span> : <img src={src} alt="" loading="lazy" decoding="async" />}
+      {placeholder && showTag && <span className="ph-tag">{t('img.awaitingPhoto')}</span>}
       {children}
     </div>
   );
