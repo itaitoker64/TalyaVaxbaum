@@ -378,6 +378,9 @@ const MIGRATIONS: string[] = [
   CREATE TABLE password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires_at TEXT NOT NULL);
   CREATE INDEX password_resets_user ON password_resets(user_id);
   `,
+  /* 5: Track B — the client's existing program, shared with the coach */ `
+  ALTER TABLE client_profiles ADD COLUMN existing_program_json TEXT;
+  `,
 ];
 
 export function openDb(file: string): DB {

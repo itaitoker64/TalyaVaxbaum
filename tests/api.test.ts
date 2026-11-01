@@ -368,6 +368,29 @@ test('guided practice library: categories, covers, captions, practice logs', asy
   assert.ok('level' in sched.data[0] && 'equipment' in sched.data[0]);
 });
 
+test('Track B: client shares an existing program; coach sees it with history', async () => {
+  assert.equal((await coach.put(`/clients/${bobId}/settings`, { track: 'B' })).status, 200);
+  assert.equal((await bob.get('/auth/me')).data.track, 'B');
+  const pdf = await bob.post(`/clients/${bobId}/media`, { kind: 'other', title: 'My program' });
+  assert.equal((await bob.req('PUT', `/media/${pdf.data.id}/file`, new TextEncoder().encode('%PDF-1.4 test'), { 'content-type': 'application/pdf' })).status, 200);
+  assert.equal((await bob.put(`/clients/${bobId}/existing-program`, { text: 'Mon: squat 5x5', mediaIds: [pdf.data.id] })).status, 200);
+  assert.equal((await bob.put(`/clients/${bobId}/existing-program`, { text: 'Mon: squat 5x5, Thu: deadlift 3x5', mediaIds: [pdf.data.id] })).status, 200);
+  const view = await coach.get(`/clients/${bobId}`);
+  assert.equal(view.data.existingProgram.text, 'Mon: squat 5x5, Thu: deadlift 3x5');
+  assert.equal(view.data.existingProgram.history[0].text, 'Mon: squat 5x5');
+  assert.equal((await coach.get(`/media/${pdf.data.id}/file`)).status, 200);
+  // Only the client writes it; others can't read or write; foreign media rejected
+  assert.equal((await coach.put(`/clients/${bobId}/existing-program`, { text: 'x' })).status, 403);
+  assert.equal((await alice.put(`/clients/${bobId}/existing-program`, { text: 'x' })).status, 404);
+  assert.equal((await alice.get(`/media/${pdf.data.id}/file`)).status, 404);
+  assert.equal((await bob.put(`/clients/${bobId}/existing-program`, { text: 'x', mediaIds: [ids.privateMedia] })).status, 400);
+  // Coach attention queue until reviewed
+  assert.ok((await coach.get('/coach/attention')).data.some((i: any) => i.type === 'existing_program' && i.clientId === bobId));
+  assert.equal((await bob.post(`/clients/${bobId}/existing-program/review`)).status, 403);
+  assert.equal((await coach.post(`/clients/${bobId}/existing-program/review`)).status, 200);
+  assert.ok(!(await coach.get('/coach/attention')).data.some((i: any) => i.type === 'existing_program' && i.clientId === bobId));
+});
+
 test('permissions: a client cannot access another client’s private data', async () => {
   const A = aliceId;
   const paths = [

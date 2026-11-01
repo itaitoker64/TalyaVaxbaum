@@ -54,3 +54,6 @@ Verification: 20 tests, typecheck, production build, full browser coaching journ
 ## Questionnaire access from settings
 
 Clients can open the questionnaire from Account/Profile, review existing answers, edit and save, or cancel. Saving returns to settings with confirmation. First-time completion still leads to Today. Existing authorized client-profile endpoints are reused, including their owner checks; no schema change. Browser coverage checks prefilled answers, persistence after reopening, unchanged other answers, original completion date, coach visibility, and cancellation without saving. Typecheck, tests, build and full browser journey passed before commit.
+## Track B — first step (added)
+Clients on Track B see "התוכנית הקיימת שלי" in Training. They share their current strength program as text plus photos or a PDF (`PUT /api/clients/:cid/existing-program`, client only; earlier versions are kept in `history`). The coach sees it at the top of the client's Overview, with file links and previous versions. Switch a client to Track B under Overview → מסלול. Tested in the API (permissions included) and in the browser.
+Next for Track B: an attention-queue item when a client updates their program; optionally let the coach add the client's own strength days to the weekly schedule as "your session" workouts (a workout with no items already works for this).

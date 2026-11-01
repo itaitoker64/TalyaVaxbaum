@@ -16,6 +16,7 @@ export function Attention() {
       case 'video': return `/coach/clients/${i.clientId}/videos`;
       case 'message': return `/coach/clients/${i.clientId}/messages`;
       case 'goal_review': return `/coach/goals/${i.id}`;
+      case 'existing_program': return `/coach/clients/${i.clientId}`;
       case 'missed': return `/coach/clients/${i.clientId}/schedule`;
       default: return `/coach/clients/${i.clientId}/program`;
     }

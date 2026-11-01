@@ -3,8 +3,9 @@ import { Link, useSearchParams } from 'react-router';
 import { PracticeLibrary } from './Library.tsx';
 import { useI18n } from '../i18n/index.tsx';
 import { useAuth, useUser } from '../auth.tsx';
-import { useApi } from '../api.ts';
-import { Async, StatusBadge, Seg, Empty, useDateLabel, N } from '../components/ui.tsx';
+import { useApi, PUT } from '../api.ts';
+import { Uploader } from '../components/media.tsx';
+import { Async, StatusBadge, Seg, Empty, useDateLabel, N, TextArea, ErrorBox } from '../components/ui.tsx';
 import { todayISO, weekStart, addDays, weekDates, dayOfWeek } from '../../../shared/dates.ts';
 import type { StringKey } from '../i18n/strings.ts';
 
@@ -96,6 +97,7 @@ export function LogHistory({ clientId, linkBase }: { clientId: string; linkBase:
 export function Training() {
   const { t } = useI18n();
   const user = useUser();
+  const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const tab = (params.get('tab') as 'week' | 'library' | 'history') || 'week';
   const setTab = (v: string) => setParams(v === 'week' ? {} : { tab: v }, { replace: true });
@@ -105,9 +107,51 @@ export function Training() {
       <div style={{ marginBottom: '0.9rem' }}>
         <Seg value={tab} onChange={setTab} options={[{ value: 'week', label: t('training.schedule') }, { value: 'library', label: t('training.library') }, { value: 'history', label: t('training.history') }]} />
       </div>
+      {tab === 'week' && me?.track === 'B' && <ExistingProgramCard />}
       {tab === 'week' && <ScheduleWeek clientId={user.id} linkFor={(s) => (s.log_id && s.log_status !== 'draft' ? `/training/log/${s.log_id}` : `/training/session/${s.id}`)} />}
       {tab === 'library' && <PracticeLibrary />}
       {tab === 'history' && <LogHistory clientId={user.id} linkBase="/training/log/" />}
     </div>
+  );
+}
+
+/** Track B: the client shares the strength program they already follow. */
+function ExistingProgramCard() {
+  const { t, fmtDate } = useI18n();
+  const user = useUser();
+  const q = useApi<any>(`/clients/${user.id}`);
+  const [text, setText] = useState<string | null>(null);
+  const [files, setFiles] = useState<string[] | null>(null);
+  const [msg, setMsg] = useState(false);
+  const [err, setErr] = useState<unknown>(null);
+  const ep = q.data?.existingProgram;
+  // Open by default until something is shared; afterwards the user's own toggle wins.
+  const [open, setOpen] = useState<boolean | null>(null);
+  const isOpen = open ?? !ep;
+  const curText = text ?? ep?.text ?? '';
+  const curFiles = files ?? ep?.mediaIds ?? [];
+  return (
+    <details className="card" open={isOpen} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary className="row between" style={{ cursor: 'pointer' }}>
+        <h3 style={{ margin: 0 }}>{t('trackB.title')}</h3>
+        {ep?.updatedAt && <span className="tiny muted">{t('trackB.updated', { date: fmtDate(ep.updatedAt) })}</span>}
+      </summary>
+      <div className="stack" style={{ marginTop: '0.6rem' }}>
+        <p className="small muted" style={{ margin: 0 }}>{t('trackB.intro')}</p>
+        <TextArea aria-label={t('trackB.text')} placeholder={t('trackB.text')} value={curText} onChange={(e) => { setText(e.target.value); setMsg(false); }} style={{ minHeight: '8rem' }} />
+        <div className="row">
+          {curFiles.map((id: string, i: number) => (
+            <span key={id} className="badge ok">📎 {i + 1}<button className="btn ghost small" style={{ minHeight: 0, padding: 0 }} aria-label={t('common.delete')} onClick={() => setFiles(curFiles.filter((x: string) => x !== id))}>✕</button></span>
+          ))}
+          <Uploader createPath={`/clients/${user.id}/media`} meta={{ kind: 'other', title: t('trackB.title') }} accept="image/*,application/pdf" label={t('trackB.files')} onDone={(id) => setFiles([...curFiles, id])} />
+        </div>
+        {!!err && <ErrorBox error={err} />}
+        {msg && <div className="alert ok">{t('trackB.saved')}</div>}
+        <button className="btn primary" disabled={!curText.trim() && !curFiles.length} onClick={async () => {
+          try { await PUT(`/clients/${user.id}/existing-program`, { text: curText, mediaIds: curFiles }); setOpen(true); setMsg(true); q.reload(); } catch (e) { setErr(e); }
+        }}>{t('common.save')}</button>
+        <p className="tiny muted" style={{ margin: 0 }}>{t('trackB.later')}</p>
+      </div>
+    </details>
   );
 }
