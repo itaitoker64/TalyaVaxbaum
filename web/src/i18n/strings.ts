@@ -1,6 +1,10 @@
 // UI strings: [Hebrew, English]. Hebrew is the default. Wording avoids gendered verb forms
 // where possible (infinitives and nouns), and stays supportive around missed sessions.
 export const STRINGS = {
+  'onb.settingsTitle': ['שאלון היכרות', 'Getting-to-know-you questionnaire'],
+  'onb.open': ['מילוי ועדכון השאלון', 'Complete or update questionnaire'],
+  'onb.editIntro': ['אפשר לעדכן את המטרות, הניסיון וההעדפות שלך. התשובות נשמרות בפרופיל ונגישות למאמנת.', 'Update your goals, experience and preferences. Your answers are saved in your profile and visible to your coach.'],
+  'onb.saved': ['התשובות לשאלון נשמרו.', 'Your questionnaire answers have been saved.'],
   'auth.forgot': ['שכחת סיסמה?', 'Forgot password?'],
   'auth.reset': ['איפוס סיסמה', 'Reset password'],
   'auth.resetSent': ['אם החשבון קיים, יישלח אליו קישור לאיפוס הסיסמה.', 'If the account exists, a reset link will be sent.'],

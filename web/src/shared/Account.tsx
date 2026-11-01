@@ -1,3 +1,4 @@
+import { Link, useSearchParams } from 'react-router';
 import { useState } from 'react';
 import { useI18n } from '../i18n/index.tsx';
 import { useAuth, useUser } from '../auth.tsx';
@@ -7,6 +8,7 @@ import { Field, Input, Seg, ErrorBox } from '../components/ui.tsx';
 export function Account() {
   const { t, locale, setLocale } = useI18n();
   const user = useUser();
+  const [params] = useSearchParams();
   const { logout, reload } = useAuth();
   const [name, setName] = useState(user.name);
   const [pw, setPw] = useState({ current: '', next: '' });
@@ -15,6 +17,11 @@ export function Account() {
   return (
     <div className="main" style={{ padding: 0 }}>
       <h1>{t('settings.profile')}</h1>
+      {params.get('questionnaire') === 'saved' && <p role="status" className="alert ok">{t('onb.saved')}</p>}
+      {user.role === 'client' && <section className="card stack">
+        <h2>{t('onb.settingsTitle')}</h2><p className="muted">{t('onb.editIntro')}</p>
+        <Link className="btn" to="/onboarding">{t('onb.open')}</Link>
+      </section>}
       <div className="card stack">
         <Field label={t('common.name')}><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
         <Field label={t('common.language')}>

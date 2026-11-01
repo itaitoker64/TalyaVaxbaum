@@ -50,3 +50,7 @@ Added migration 4 (after the published coach-invite migration 3) for hashed, exp
 Added tested SQLite backup script and `docs/OPERATIONS.md` with Render disk, email, backup and restore procedures. User reports Starter upgrade; disk attachment, external backups, verified sender and real email delivery are NOT verified. RESEND_API_KEY, EMAIL_FROM and APP_URL were absent from the development environment. Set them securely in Render; EMAIL_NOTIFICATIONS=1 enables message emails.
 
 Verification: 20 tests, typecheck, production build, full browser coaching journey and targeted recipe-download/coach-preview/reset UI checks. Backup produced and passed SQLite integrity checking. Visual surfaces retain the approved flatter design. Real photography and a final privacy/consent policy must come from Talya. Previous entries identifying recipe sharing, session preview and password-reset implementation as pending are superseded by this section.
+
+## Questionnaire access from settings
+
+Clients can open the questionnaire from Account/Profile, review existing answers, edit and save, or cancel. Saving returns to settings with confirmation. First-time completion still leads to Today. Existing authorized client-profile endpoints are reused, including their owner checks; no schema change. Browser coverage checks prefilled answers, persistence after reopening, unchanged other answers, original completion date, coach visibility, and cancellation without saving. Typecheck, tests, build and full browser journey passed before commit.

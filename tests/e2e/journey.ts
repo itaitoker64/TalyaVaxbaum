@@ -138,6 +138,26 @@ try {
   // 9. Other screens render without errors (demo client with history)
   const noa = await newPage(browser);
   await login(noa, 'noa@demo.local', 'demo-password');
+  const noaId = (await api(noa, 'GET', '/auth/me')).body.user.id;
+  const beforeQuestionnaire = (await api(noa, 'GET', `/clients/${noaId}`)).body;
+  await noa.goto(BASE + '/account');
+  await noa.getByRole('link', { name: 'מילוי ועדכון השאלון' }).click();
+  await noa.locator('textarea').first().waitFor();
+  assert.equal(await noa.locator('textarea').first().inputValue(), beforeQuestionnaire.onboarding.goals);
+  await noa.locator('textarea').first().fill('מטרה מעודכנת מבדיקת השאלון');
+  await noa.getByRole('button', { name: 'שמירה', exact: true }).click();
+  await noa.waitForURL('**/account?questionnaire=saved');
+  await noa.getByRole('status').waitFor();
+  const updatedQuestionnaire = (await api(coach, 'GET', `/clients/${noaId}`)).body;
+  assert.equal(updatedQuestionnaire.onboarding.goals, 'מטרה מעודכנת מבדיקת השאלון');
+  assert.equal(updatedQuestionnaire.onboarding.experience, beforeQuestionnaire.onboarding.experience);
+  assert.equal(updatedQuestionnaire.onboardingCompletedAt, beforeQuestionnaire.onboardingCompletedAt);
+  await noa.getByRole('link', { name: 'מילוי ועדכון השאלון' }).click();
+  await noa.locator('textarea').first().waitFor();
+  assert.equal(await noa.locator('textarea').first().inputValue(), 'מטרה מעודכנת מבדיקת השאלון');
+  await noa.locator('textarea').first().fill('טיוטה שלא נשמרה');
+  await noa.getByRole('link', { name: 'ביטול', exact: true }).click();
+  assert.equal((await api(noa, 'GET', `/clients/${noaId}`)).body.onboarding.goals, 'מטרה מעודכנת מבדיקת השאלון');
   for (const [path, name] of [['/', 'demo-today'], ['/training', 'demo-training'], ['/nutrition', 'demo-nutrition'], ['/progress', 'demo-progress'], ['/messages', 'demo-messages']] as const) {
     await noa.goto(BASE + path);
     await noa.waitForLoadState('networkidle');
